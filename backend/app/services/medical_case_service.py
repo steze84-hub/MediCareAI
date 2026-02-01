@@ -151,3 +151,29 @@ class MedicalCaseService:
         
         result = await self.db.execute(stmt)
         return result.scalar()
+    
+    async def update_medical_case_status(
+        self,
+        case_id: uuid.UUID,
+        patient_id: uuid.UUID,
+        status: str
+    ) -> Optional[MedicalCase]:
+        """
+        更新病历状态
+        
+        Args:
+            case_id: 病历ID
+            patient_id: 患者ID（用于权限验证）
+            status: 新状态 ('active', 'completed', 'closed')
+            
+        Returns:
+            更新后的病历记录或None
+        """
+        medical_case = await self.get_medical_case_by_id(case_id, patient_id)
+        
+        if medical_case:
+            medical_case.status = status
+            await self.db.commit()
+            await self.db.refresh(medical_case)
+        
+        return medical_case

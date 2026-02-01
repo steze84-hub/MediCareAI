@@ -4,7 +4,8 @@ AI 服务 - 集成 GLM-4.7-Flash（llama.cpp API）
 """
 import httpx
 import logging
-from typing import Dict, Any, Optional
+import json
+from typing import Dict, Any, Optional, AsyncGenerator
 from app.core.config import settings
 from app.services.knowledge_base_service import get_knowledge_loader
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class AIService:
-    """AI 服务类 - 使用 llama.cpp API"""
+    """AI 服务类 - 使用 llama.cpp API，支持流式输出"""
 
     async def chat_with_glm(self, messages: list) -> Dict[str, Any]:
         """
@@ -36,7 +37,7 @@ class AIService:
                     json={
                         "model": settings.ai_model_id,
                         "messages": messages,
-                        "max_tokens": 2000,
+                        "max_tokens": 8192,
                         "temperature": 0.7,
                         "stream": False
                     }
@@ -80,6 +81,60 @@ class AIService:
                 "success": False,
                 "error": str(e)
             }
+
+    async def chat_with_glm_stream(self, messages: list) -> AsyncGenerator[str, None]:
+        """
+        使用 Nemotron-3-Nano-30B 进行流式对话
+
+        Args:
+            messages: 对话消息列表
+
+        Yields:
+            流式输出的文本块
+        """
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{settings.ai_api_url}chat/completions",
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {settings.ai_api_key}"
+                    },
+                    json={
+                        "model": settings.ai_model_id,
+                        "messages": messages,
+                        "max_tokens": 8192,
+                        "temperature": 0.7,
+                        "stream": True
+                    }
+                ) as response:
+                    if response.status_code == 200:
+                        async for line in response.aiter_lines():
+                            if line.startswith("data: "):
+                                data_str = line[6:]
+                                if data_str.strip() == "[DONE]":
+                                    break
+                                try:
+                                    data = json.loads(data_str)
+                                    if 'choices' in data and len(data['choices']) > 0:
+                                        delta = data['choices'][0].get('delta', {})
+                                        content = delta.get('content', '')
+                                        if content:
+                                            yield content
+                                except json.JSONDecodeError:
+                                    continue
+                    else:
+                        error_text = await response.aread()
+                        logger.error(f"Streaming API error: {response.status_code} - {error_text}")
+                        yield f"[ERROR] API error: {response.status_code}"
+
+        except httpx.TimeoutException:
+            logger.error("Streaming API timeout")
+            yield "[ERROR] Request timeout"
+        except Exception as e:
+            logger.error(f"Streaming API error: {str(e)}")
+            yield f"[ERROR] {str(e)}"
 
     async def query_knowledge_base(self, symptoms: str, disease_category: str = "respiratory") -> Dict[str, Any]:
         """
@@ -285,6 +340,78 @@ class AIService:
                 "error": result.get('error'),
                 "diagnosis": "AI 分析失败，请稍后重试"
             }
+
+    async def comprehensive_diagnosis_stream(
+        self, 
+        symptoms: str,
+        patient_info: Dict[str, Any],
+        duration: Optional[str] = None,
+        severity: Optional[str] = None,
+        uploaded_files: Optional[list] = None,
+        disease_category: str = "respiratory"
+    ) -> AsyncGenerator[str, None]:
+        """
+        完整诊断工作流（流式输出）
+        
+        整合：个人信息 + 诊疗提交信息(MinerU提取) + 知识库信息 -> AI诊断（流式）
+
+        Args:
+            symptoms: 症状描述
+            patient_info: 患者个人信息
+            duration: 症状持续时间
+            severity: 严重程度
+            uploaded_files: 上传的文件列表(会被MinerU提取)
+            disease_category: 疾病分类
+
+        Yields:
+            流式输出的诊断文本块
+        """
+        logger.info("开始完整诊断工作流（流式）...")
+        
+        # 1. 处理上传的文件（MinerU提取）
+        extracted_texts = []
+        if uploaded_files:
+            logger.info(f"正在提取 {len(uploaded_files)} 个文件...")
+            for file_url in uploaded_files:
+                extraction_result = await self.extract_document_with_mineru(file_url)
+                if extraction_result.get('success'):
+                    text_content = extraction_result.get('text_content', '')
+                    if text_content:
+                        extracted_texts.append(text_content[:2000])
+                        logger.info(f"文件提取成功，内容长度: {len(text_content)}")
+                else:
+                    logger.warning(f"文件提取失败: {extraction_result.get('error')}")
+        
+        # 2. 查询知识库
+        logger.info(f"正在查询知识库: {disease_category}...")
+        kb_result = await self.query_knowledge_base(symptoms, disease_category)
+        
+        # 3. 构建完整的提示词
+        prompt = self._build_diagnosis_prompt(
+            patient_info=patient_info,
+            symptoms=symptoms,
+            duration=duration,
+            severity=severity,
+            extracted_texts=extracted_texts,
+            knowledge_base=kb_result
+        )
+        
+        logger.info("正在调用AI模型进行流式诊断...")
+        
+        # 4. 调用AI进行流式诊断
+        messages = [
+            {"role": "system", "content": "你是一位专业的全科医生，拥有丰富的临床经验。请根据提供的患者信息、症状描述、相关检查资料和医学知识库，给出专业的诊断意见。请确保回答完整，包含：1）初步诊断（按可能性排序的表格）；2）详细分析说明；3）建议检查项目；4）治疗建议；5）注意事项。"},
+            {"role": "user", "content": prompt}
+        ]
+        
+        chunk_count = 0
+        total_chars = 0
+        async for chunk in self.chat_with_glm_stream(messages):
+            chunk_count += 1
+            total_chars += len(chunk)
+            yield chunk
+        
+        logger.info(f"流式诊断完成，共 {chunk_count} 个 chunks，{total_chars} 个字符")
 
     def _build_diagnosis_prompt(
         self,

@@ -2,15 +2,20 @@
 AI 诊断 API 端点 - 完整工作流集成
 """
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+import json
 from app.db.database import get_db
 from app.core.deps import get_current_active_user
 from app.models.models import User
 from app.services.ai_service import ai_service
 from app.services.patient_service import PatientService
 from app.services.medical_case_service import MedicalCaseService
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -186,6 +191,143 @@ async def comprehensive_diagnosis(
         raise
     except Exception as e:
         logger.error(f"完整诊断流程失败: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"诊断失败: {str(e)}"
+        )
+
+
+@router.post("/comprehensive-diagnosis-stream")
+async def comprehensive_diagnosis_stream(
+    request: ComprehensiveDiagnosisRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    完整诊断工作流（流式输出）
+    
+    整合：个人信息 + 诊疗提交信息(MinerU提取) + 知识库信息 -> AI诊断（流式返回）
+    
+    工作流程：
+    1. 获取患者个人信息
+    2. 提取上传文件的文本内容（MinerU）
+    3. 查询相关医学知识库
+    4. 整合所有信息提交给AI模型（流式输出）
+    5. 返回流式诊断结果
+    """
+    try:
+        # 1. 获取患者个人信息
+        patient_service = PatientService(db)
+        patients = await patient_service.get_patients_by_user(current_user.id, skip=0, limit=1)
+        
+        patient_info = {
+            "full_name": current_user.full_name,
+            "email": current_user.email
+        }
+        
+        if patients:
+            patient = patients[0]
+            patient_info.update({
+                "gender": patient.gender,
+                "date_of_birth": str(patient.date_of_birth) if patient.date_of_birth else None,
+                "phone": patient.phone,
+                "address": patient.address,
+                "emergency_contact": patient.emergency_contact,
+                "notes": patient.notes
+            })
+        
+        # 2. 调用流式诊断流程
+        async def generate_stream():
+            """生成流式输出"""
+            full_diagnosis = ""
+            
+            async for chunk in ai_service.comprehensive_diagnosis_stream(
+                symptoms=request.symptoms,
+                patient_info=patient_info,
+                duration=request.duration,
+                severity=request.severity,
+                uploaded_files=request.uploaded_files or [],
+                disease_category=request.disease_category
+            ):
+                full_diagnosis += chunk
+                # 发送 SSE 格式数据
+                yield f"data: {json.dumps({'chunk': chunk, 'done': False})}\n\n"
+            
+            # 3. 保存诊断结果到病历记录
+            try:
+                if patients:
+                    patient = patients[0]
+                    case_service = MedicalCaseService(db)
+                    
+                    # 构建病历标题
+                    title = f"AI诊断 - {request.severity}"
+                    if request.duration:
+                        title += f" - {request.duration}"
+                    
+                    # 构建详细描述
+                    description_parts = []
+                    if request.triggers:
+                        description_parts.append(f"诱发因素: {request.triggers}")
+                    if request.previous_diseases:
+                        description_parts.append(f"既往病史: {request.previous_diseases}")
+                    description = " | ".join(description_parts) if description_parts else None
+                    
+                    # 创建病历记录
+                    medical_case = await case_service.create_medical_case(
+                        patient_id=patient.id,
+                        title=title,
+                        symptoms=request.symptoms,
+                        diagnosis=full_diagnosis,
+                        severity=request.severity,
+                        description=description or ""
+                    )
+
+                    # AI诊断完成，更新病历状态为"已完成"
+                    medical_case = await case_service.update_medical_case_status(
+                        case_id=medical_case.id,
+                        patient_id=patient.id,
+                        status='completed'
+                    )
+                    logger.info(f"病历状态已更新为'completed': {medical_case.id}")
+
+                    # 发送完成信息
+                    completion_data = {
+                        'done': True,
+                        'case_id': str(medical_case.id),
+                        'saved_to_records': True,
+                        'status': 'completed'
+                    }
+                    yield f"data: {json.dumps(completion_data)}\n\n"
+                else:
+                    completion_data = {
+                        'done': True,
+                        'case_id': f"case-{current_user.id}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+                        'saved_to_records': False
+                    }
+                    yield f"data: {json.dumps(completion_data)}\n\n"
+            except Exception as save_error:
+                logger.error(f"保存病历记录失败: {str(save_error)}")
+                # 保存失败不影响诊断结果返回，只是记录日志
+                completion_data = {
+                    'done': True,
+                    'case_id': f"case-{current_user.id}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+                    'saved_to_records': False,
+                    'save_error': str(save_error)
+                }
+                yield f"data: {json.dumps(completion_data)}\n\n"
+        
+        return StreamingResponse(
+            generate_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"流式诊断流程失败: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"诊断失败: {str(e)}"

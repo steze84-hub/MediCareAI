@@ -428,6 +428,177 @@
         .file-remove:hover {
             background: #c82333;
         }
+
+        /* Markdown Rendering Styles */
+        .markdown-body {
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3,
+        .markdown-body h4,
+        .markdown-body h5,
+        .markdown-body h6 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: #333;
+        }
+
+        .markdown-body h1 {
+            font-size: 2em;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+
+        .markdown-body h2 {
+            font-size: 1.5em;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+
+        .markdown-body h3 {
+            font-size: 1.25em;
+        }
+
+        .markdown-body h4 {
+            font-size: 1em;
+        }
+
+        .markdown-body p {
+            margin-bottom: 16px;
+        }
+
+        .markdown-body strong {
+            font-weight: 600;
+            color: #24292e;
+        }
+
+        .markdown-body em {
+            font-style: italic;
+        }
+
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 16px;
+            display: block;
+            overflow-x: auto;
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 12px 16px;
+            border: 1px solid #dfe2e5;
+            text-align: left;
+        }
+
+        .markdown-body table th {
+            background-color: #f6f8fa;
+            font-weight: 600;
+            color: #24292e;
+        }
+
+        .markdown-body table tr:nth-child(2n) {
+            background-color: #f6f8fa;
+        }
+
+        .markdown-body ul,
+        .markdown-body ol {
+            margin-bottom: 16px;
+            padding-left: 2em;
+        }
+
+        .markdown-body li {
+            margin-bottom: 8px;
+        }
+
+        .markdown-body li > ul,
+        .markdown-body li > ol {
+            margin-top: 8px;
+            margin-bottom: 0;
+        }
+
+        .markdown-body code {
+            background-color: rgba(27, 31, 35, 0.05);
+            border-radius: 3px;
+            font-size: 85%;
+            margin: 0;
+            padding: 0.2em 0.4em;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        }
+
+        .markdown-body pre {
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            font-size: 85%;
+            line-height: 1.45;
+            overflow: auto;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent;
+            border: 0;
+            display: inline;
+            line-height: inherit;
+            margin: 0;
+            overflow: visible;
+            padding: 0;
+            word-wrap: normal;
+        }
+
+        .markdown-body blockquote {
+            border-left: 4px solid #667eea;
+            color: #6a737d;
+            padding: 0 1em;
+            margin: 0 0 16px 0;
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .markdown-body blockquote > :first-child {
+            margin-top: 0;
+        }
+
+        .markdown-body blockquote > :last-child {
+            margin-bottom: 0;
+        }
+
+        .markdown-body hr {
+            border: 0;
+            border-top: 1px solid #e1e4e8;
+            margin: 24px 0;
+        }
+
+        .markdown-body a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .markdown-body a:hover {
+            text-decoration: underline;
+        }
+
+        .markdown-body img {
+            max-width: 100%;
+            box-sizing: content-box;
+        }
+
+        /* Streaming Content Specific */
+        #streamingContent {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        #streamingContent.markdown-body {
+            font-size: 15px;
+        }
     </style>
 </head>
 <body>
@@ -534,6 +705,8 @@
         </div>
     </div>
 
+    <!-- Markdown Parser Library -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         const API_BASE = 'http://192.168.50.115:8000';
         let uploadedFiles = [];
@@ -621,11 +794,12 @@
             updateFileList();
         }
 
-        // 提交症状
+        // 提交症状（流式输出版本）
         async function submitSymptoms() {
             const token = localStorage.getItem('access_token');
             const resultDiv = document.getElementById('result');
             const aiResultDiv = document.getElementById('aiResult');
+            const diagnosisContent = document.getElementById('diagnosisContent');
 
             const symptoms = document.getElementById('symptoms').value;
             const durationValue = document.getElementById('duration_value').value;
@@ -640,22 +814,26 @@
                 return;
             }
 
-            const formData = {
-                symptoms: symptoms,
-                duration: durationValue ? `${durationValue}${durationUnit}` : '',
-                severity: severity,
-                onset_time: onsetTime,
-                triggers: triggers,
-                previous_diseases: previousDiseases,
-                files: uploadedFiles.map(f => f.name)
-            };
+            // 重置并显示结果区域
+            aiResultDiv.classList.add('show');
+            diagnosisContent.innerHTML = `
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                    <h4 style="color: #667eea; margin-bottom: 15px;">🤖 AI 正在分析...</h4>
+                    <div id="streamingContent" style="line-height: 1.8; color: #333; min-height: 100px;">
+                        <span class="spinner"></span> 正在初始化诊断...
+                    </div>
+                    <div id="streamingStatus" style="margin-top: 10px; color: #666; font-size: 14px;">
+                        等待AI响应...
+                    </div>
+                </div>
+            `;
 
             resultDiv.className = 'result info show';
-            resultDiv.innerHTML = '<span class="spinner"></span> 正在提交症状给AI分析...';
+            resultDiv.innerHTML = '<span class="spinner"></span> AI正在实时分析您的症状...';
 
             try {
-                // 调用真实AI诊断API
-                const response = await fetch(`${API_BASE}/api/v1/ai/comprehensive-diagnosis`, {
+                // 调用流式AI诊断API
+                const response = await fetch(`${API_BASE}/api/v1/ai/comprehensive-diagnosis-stream`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -678,28 +856,100 @@
                     throw new Error(errorData.detail || 'AI诊断请求失败');
                 }
 
-                const result = await response.json();
+                // 处理流式响应
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullDiagnosis = '';
+                let caseId = null;
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        break;
+                    }
+
+                    // 解码收到的数据
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // 处理SSE格式的数据行
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // 保留未完成的部分
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6); // 移除 'data: ' 前缀
+                            
+                            if (dataStr === '[DONE]') {
+                                continue;
+                            }
+
+                            try {
+                                const data = JSON.parse(dataStr);
+                                
+                                if (data.chunk) {
+                                    // 收到新的内容块
+                                    fullDiagnosis += data.chunk;
+                                    updateStreamingContent(fullDiagnosis);
+                                    document.getElementById('streamingStatus').textContent = 'AI正在输出诊断结果...';
+                                }
+                                
+                                if (data.done) {
+                                    // 流式输出完成
+                                    caseId = data.case_id;
+                                    document.getElementById('streamingStatus').innerHTML = 
+                                        '<span style="color: #28a745;">✓ 诊断完成</span>';
+                                    
+                                    // 上传文件（如果有）
+                                    if (uploadedFiles.length > 0 && caseId) {
+                                        await uploadFiles(caseId);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('解析流数据失败:', e, dataStr);
+                            }
+                        }
+                    }
+                }
 
                 showResult('success', 'AI诊断完成！');
 
-                // 上传文件（如果有）
-                if (uploadedFiles.length > 0 && result.case_id) {
-                    await uploadFiles(result.case_id);
-                }
-
-                // 显示AI诊断结果
+                // 最终显示格式化结果
                 displayAiResult({
-                    case_id: result.case_id,
-                    diagnosis: result.diagnosis,
+                    case_id: caseId,
+                    diagnosis: fullDiagnosis,
                     possible_causes: '详见AI诊断报告',
                     recommendations: '请参考诊断建议',
                     severity: severity,
-                    full_result: result
+                    full_result: {
+                        success: true,
+                        case_id: caseId,
+                        diagnosis: fullDiagnosis
+                    }
                 });
 
             } catch (error) {
                 console.error('诊断错误:', error);
                 showResult('error', '提交失败：' + error.message);
+                diagnosisContent.innerHTML = `
+                    <div style="color: #dc3545;">
+                        <strong>诊断失败：</strong>${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // 更新流式显示内容
+        function updateStreamingContent(text) {
+            const streamingContent = document.getElementById('streamingContent');
+            if (streamingContent) {
+                // 使用 marked.js 将 Markdown 转换为 HTML
+                const htmlContent = marked.parse(text);
+                streamingContent.innerHTML = htmlContent;
+                
+                // 自动滚动到底部
+                streamingContent.scrollTop = streamingContent.scrollHeight;
             }
         }
 
@@ -731,16 +981,13 @@
                 const result = data.full_result;
                 const diagnosisText = result.diagnosis || '暂无诊断结果';
                 
-                // 将换行符转换为HTML
-                const formattedDiagnosis = diagnosisText
-                    .replace(/\n/g, '<br>')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+                // 使用 marked.js 将 Markdown 转换为 HTML
+                const formattedDiagnosis = marked.parse(diagnosisText);
 
                 diagnosisContent.innerHTML = `
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
                         <h4 style="color: #667eea; margin-bottom: 15px;">🤖 AI 诊断报告</h4>
-                        <div style="line-height: 1.8; color: #333;">
+                        <div class="markdown-body" style="line-height: 1.8; color: #333;">
                             ${formattedDiagnosis}
                         </div>
                     </div>

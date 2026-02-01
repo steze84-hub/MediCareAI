@@ -11,6 +11,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.2] - 2025-02-01
+
+### Added | 新增
+
+#### Streaming AI Diagnosis with Real-time Output | AI诊断流式输出
+- **Implemented real-time streaming diagnosis** / 实现实时流式诊断
+  - Added `/api/v1/ai/comprehensive-diagnosis-stream` endpoint / 添加流式诊断端点
+  - StreamingResponse with Server-Sent Events (SSE) format / 使用 SSE 格式的 StreamingResponse
+  - Character-by-character real-time AI response delivery / 逐字符实时传输 AI 响应
+  - Enhanced user experience with immediate visual feedback / 即时视觉反馈改善用户体验
+
+- **AI Service Streaming Support** / AI 服务流式支持
+  - Added `chat_with_glm_stream()` method for streaming chat / 添加流式聊天方法
+  - Added `comprehensive_diagnosis_stream()` for full workflow / 添加完整工作流流式方法
+  - AsyncGenerator for efficient memory usage / 使用 AsyncGenerator 高效内存利用
+  - Increased max_tokens to 8192 for comprehensive responses / 增加 max_tokens 至 8192 以支持完整回复
+
+- **Frontend Markdown Rendering** / 前端 Markdown 渲染
+  - Integrated marked.js for Markdown-to-HTML conversion / 集成 marked.js 进行 Markdown 到 HTML 转换
+  - Real-time formatted display as AI generates content / AI 生成内容时实时格式化显示
+  - Professional styling for tables, lists, code blocks / 表格、列表、代码块的专业样式
+  - Support for headers, bold, italic, and complex formatting / 支持标题、粗体、斜体和复杂格式
+
+#### Medical Records Enhancements | 诊疗记录增强
+- **Fixed Status Bug** / 修复状态 Bug
+  - Medical cases now correctly show "已完成" (completed) after AI diagnosis / 病历在 AI 诊断后正确显示"已完成"
+  - Added `update_medical_case_status()` method in service layer / 在服务层添加 `update_medical_case_status()` 方法
+  - Automatic status transition from 'active' to 'completed' / 自动状态从 'active' 转为 'completed'
+
+- **PDF Export Functionality** / PDF 导出功能
+  - Export diagnosis reports as PDF files / 将诊断报告导出为 PDF 文件
+  - Using html2pdf.js library / 使用 html2pdf.js 库
+  - Automatic button hiding during export / 导出时自动隐藏操作按钮
+  - Filename format: `诊断报告_标题_日期.pdf` / 文件名格式
+
+- **Share Functionality with QR Code** / 分享功能（带二维码）
+  - Generate shareable links with configurable content / 生成可配置内容的分享链接
+  - QR code generation for mobile scanning / 二维码生成供手机扫描
+  - Privacy options: include/exclude diagnosis, symptoms, personal info / 隐私选项
+  - One-click link copying / 一键复制链接
+
+- **Print Optimization** / 打印优化
+  - Dedicated print styles for clean output / 专用打印样式实现干净输出
+  - Hide navigation, buttons, and UI elements when printing / 打印时隐藏导航、按钮和 UI 元素
+  - Optimized page breaks and formatting / 优化的分页和格式
+
+- **Medical Case Comparison** / 病历对比功能
+  - Side-by-side comparison of two medical cases / 两份病历并排对比
+  - Compare dates, severity, symptoms, and AI diagnoses / 对比日期、严重程度、症状和 AI 诊断
+  - Dropdown selectors for case selection / 下拉选择器选择病历
+  - Real-time comparison view updates / 实时对比视图更新
+
+- **Doctor Annotations System** / 医生批注系统
+  - Add annotations to medical cases / 为病历添加批注
+  - LocalStorage-based persistence / 基于 LocalStorage 的持久化
+  - Display annotation author, timestamp, and content / 显示批注作者、时间戳和内容
+  - Styled annotation cards with yellow accent / 带黄色强调的样式化批注卡片
+
+### Changed | 变更
+
+#### Generic LLM References | 通用大模型引用
+- **Removed specific LLM brand names from UI** / 从 UI 中移除特定大模型品牌名称
+  - Updated login.html: "GLM-4.7" → "AI 大语言模型" / 更新 login.html
+  - Updated index.html: "GLM-4.7" → "先进的大语言模型" / 更新 index.html
+  - Updated test.html: "GLM-4.7" → "大语言模型" / 更新 test.html
+  - Kept MinerU references as it's actually used for document extraction / 保留 MinerU 引用
+
+### Technical Details | 技术细节
+
+**Backend Changes:**
+- `backend/app/api/api_v1/endpoints/ai.py`: Added streaming endpoint with status update
+- `backend/app/services/ai_service.py`: Added streaming methods, increased max_tokens to 8192
+- `backend/app/services/medical_case_service.py`: Added `update_medical_case_status()` method
+
+**Frontend Changes:**
+- `frontend/symptom-submit.html`: Updated for streaming with Markdown rendering
+- `frontend/medical-records.html`: Added modal with PDF export, share, print, compare, annotations
+- `frontend/login.html`, `frontend/index.html`, `frontend/test.html`: Removed GLM references
+
+**New Dependencies:**
+- marked.js (Markdown rendering)
+- html2pdf.js (PDF export)
+- qrcode.js (QR code generation)
+
+---
+
 ## [1.0.1] - 2025-02-01
 
 ### Fixed | 修复
@@ -246,5 +332,5 @@ We welcome your feedback! Please report issues or suggest features:
 ---
 
 **Last Updated | 最后更新:** 2025-02-01  
-**Current Version | 当前版本:** 1.0.0  
+**Current Version | 当前版本:** 1.0.2  
 **Maintained by | 维护者:** MediCare_AI Team
