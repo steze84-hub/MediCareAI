@@ -462,7 +462,7 @@ copies or substantial portions of the Software.
 
 - **Issues**: [GitHub Issues](https://github.com/yourusername/MediCare_AI/issues)
 - **Documentation**: [Full Documentation](docs/)
-- **Email**: support@medicare-ai.example.com
+- **Email**: hougelangley1987@gmail.com
 
 ---
 
