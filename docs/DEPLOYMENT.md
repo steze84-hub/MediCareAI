@@ -660,3 +660,106 @@ If the system is down in production / 如果生产环境系统宕机:
 **Last Updated | 最后更新:** 2025-02-01  
 **Version | 版本:** 1.0.0  
 **Maintainers | 维护者:** MediCare_AI Team
+
+---
+
+## 📚 Appendix: Deployment Experience & Best Practices | 附录：部署经验与最佳实践
+
+> **Note**: This section contains practical deployment experience from real-world deployments.
+> **注意**: 本节包含来自实际部署的实践经验。
+
+### Deployment Scenarios | 部署场景
+
+#### Scenario 1: Network-Restricted Environment | 场景1：网络受限环境
+
+**Problem**: Frontend container npm timeout | 问题：前端容器 npm 超时
+```
+npm error code ETIMEDOUT
+npm error network request to https://registry.npmjs.org/http-server failed
+```
+
+**Root Cause**: | 根本原因：
+- VM network environment issues
+- Frontend Dockerfile uses `npx http-server`, requiring network on every start
+
+**Solution**: | 解决方案：
+```bash
+# Use Nginx to serve static files directly
+# 使用 Nginx 直接提供静态文件
+# See: docker-compose.static.yml
+```
+
+**New Architecture**: | 新架构：
+```
+Nginx (static file service) + Backend API (8000)
+  ├─ /api/* → Backend:8000
+  ├─ /* → Static HTML files
+```
+
+**Benefits**: | 优势：
+- ✅ No npm runtime dependency
+- ✅ Single container, less resource usage
+- ✅ Fast startup
+- ✅ Not affected by network environment
+
+#### Scenario 2: Nginx 502 Bad Gateway | 场景2：Nginx 502 错误
+
+**Problem**: | 问题：
+```
+502 Bad Gateway when accessing frontend
+```
+
+**Root Cause**: | 根本原因：
+- Nginx config used `proxy_pass http://medicare_frontend:3000`
+- Frontend container failed to start
+
+**Solution**: | 解决方案：
+```nginx
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+    
+    # API routes proxy to backend
+    location /api/ {
+        proxy_pass http://backend:8000;
+        proxy_connect_timeout 300s;
+    }
+    
+    # Frontend static files
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+### Multi-Distro Deployment Verification | 多发行版部署验证
+
+| Distribution | Version | Status | Deployment Method |
+|-------------|---------|--------|-------------------|
+| Ubuntu | 24.04 LTS | ✅ Running | Online build |
+| Fedora | 43 Server | ✅ Running | Pre-built images |
+| openSUSE | Leap 16.0 | ✅ Running | Pre-built images |
+| openSUSE | Tumbleweed | ✅ Running | Pre-built images |
+
+### Key Lessons Learned | 关键经验教训
+
+**Docker Deployment**: | Docker 部署
+1. **Avoid runtime npm install** - Should be done at build time
+2. **Use multi-stage builds** - Reduce final image size
+3. **Static files first** - Use nginx to serve in production
+4. **Health checks** - Every service should have healthcheck
+5. **Resource limits** - Set memory and CPU limits for containers
+
+**Network Handling**: | 网络处理
+1. **Offline mode support** - Detect network environment, auto-switch
+2. **China mirrors** - Auto-configure npm, apt mirrors
+3. **Retry mechanism** - Add retry logic to network operations
+4. **Timeout settings** - Reasonable timeout values
+
+**Fault Recovery**: | 故障恢复
+1. **Auto-detection** - Regular service status checks
+2. **Auto-repair** - Common issues auto-fix scripts
+3. **Rollback mechanism** - Auto rollback on deployment failure
+4. **Log collection** - Centralized log management
+
