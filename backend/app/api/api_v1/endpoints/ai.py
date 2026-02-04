@@ -13,6 +13,7 @@ from app.models.models import User
 from app.services.ai_service import ai_service
 from app.services.patient_service import PatientService
 from app.services.medical_case_service import MedicalCaseService
+from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class ComprehensiveDiagnosisRequest(BaseModel):
     previous_diseases: Optional[str] = None
     uploaded_files: Optional[List[str]] = []  # 文件URL列表
     disease_category: str = "respiratory"  # 疾病分类
+    language: str = "zh"  # 语言偏好: zh (中文), en (英文)
 
 
 class SymptomAnalysisRequest(BaseModel):
@@ -130,7 +132,8 @@ async def comprehensive_diagnosis(
             duration=request.duration,
             severity=request.severity,
             uploaded_files=request.uploaded_files or [],
-            disease_category=request.disease_category
+            disease_category=request.disease_category,
+            language=request.language
         )
 
         if not result.get('success'):
@@ -247,7 +250,8 @@ async def comprehensive_diagnosis_stream(
                 duration=request.duration,
                 severity=request.severity,
                 uploaded_files=request.uploaded_files or [],
-                disease_category=request.disease_category
+                disease_category=request.disease_category,
+                language=request.language
             ):
                 full_diagnosis += chunk
                 # 发送 SSE 格式数据
@@ -295,14 +299,20 @@ async def comprehensive_diagnosis_stream(
                         'done': True,
                         'case_id': str(medical_case.id),
                         'saved_to_records': True,
-                        'status': 'completed'
+                        'status': 'completed',
+                        'model_used': settings.ai_model_id,
+                        'tokens_used': len(full_diagnosis) * 2,  # 估算token用量
+                        'created_at': medical_case.created_at.isoformat() if medical_case.created_at else datetime.utcnow().isoformat()
                     }
                     yield f"data: {json.dumps(completion_data)}\n\n"
                 else:
                     completion_data = {
                         'done': True,
                         'case_id': f"case-{current_user.id}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-                        'saved_to_records': False
+                        'saved_to_records': False,
+                        'model_used': settings.ai_model_id,
+                        'tokens_used': len(full_diagnosis) * 2,
+                        'created_at': datetime.utcnow().isoformat()
                     }
                     yield f"data: {json.dumps(completion_data)}\n\n"
             except Exception as save_error:

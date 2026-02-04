@@ -11,6 +11,119 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-02-04
+
+### Added | 新增
+
+#### Unified One-Click Installation Script | 统一一键安装脚本
+- **Created unified installation script (`install.sh`) supporting 7 Linux distributions** / 创建支持 7 个 Linux 发行版的统一安装脚本
+  - Multi-language support: Chinese (简体中文) and English / 多语言支持：中文和英文
+  - Automatic distribution detection / 自动检测发行版
+  - Interactive configuration (AI API, network, ports) / 交互式配置
+  - User agreement and risk acknowledgment / 用户协议和风险确认
+  - Automatic Docker & Docker Compose v2 installation / 自动安装 Docker 和 Docker Compose v2
+  - SELinux and BuildKit compatibility handling / SELinux 和 BuildKit 兼容性处理
+  - Health check after deployment / 部署后健康检查
+
+- **Supported Distributions** / 支持的发行版
+  - ✅ Ubuntu 24.04 LTS - Fully tested / 完整测试
+  - ✅ Fedora 43 Server - Fully tested / 完整测试
+  - ✅ openSUSE Leap 16.0 - Fully tested / 完整测试
+  - ✅ openSUSE Tumbleweed - Fully tested (with BuildKit fix) / 完整测试
+  - ✅ AOSC OS 13.0.7 - Fully tested / 完整测试
+  - ✅ openEuler 24.03 LTS-SP3 - Fully tested / 完整测试
+  - ✅ Deepin 25 - Fully tested / 完整测试
+
+#### AI Language Support | AI 语言支持
+- **Implemented language preference for AI diagnosis** / 实现 AI 诊断语言偏好
+  - Backend API now accepts `language` parameter (`zh` or `en`) / 后端 API 接受 `language` 参数
+  - Frontend automatically detects page language / 前端自动检测页面语言
+  - Bilingual system prompts and diagnosis prompts / 双语系统提示词和诊断提示词
+  - AI responds in user's preferred language / AI 使用用户首选语言回复
+
+#### Symptom Duration Enhancement | 症状持续时间增强
+- **Added "minutes" option for symptom duration** / 添加症状持续时间"分钟"选项
+
+### Fixed | 修复
+
+#### Bug Fixes | Bug 修复
+- **Fixed diagnosis info display bug** / 修复诊断信息显示问题
+  - Fixed "Model: N/A" issue by adding `model_used` field / 修复"模型: N/A"问题
+  - Fixed "Token usage: 0" issue by adding estimated token count / 修复"Token用量: 0"问题
+  - Fixed "Invalid Date" issue by proper ISO format datetime / 修复"Invalid Date"问题
+
+- **Fixed Docker Compose compatibility** / 修复 Docker Compose 兼容性
+  - Changed `DEBUG: true` to `DEBUG: "true"` in docker-compose.yml / 修改布尔值格式
+  - Changed `DEBUG: false` to `DEBUG: "false"` in docker-compose.prod.yml
+
+#### Documentation Fixes | 文档修复
+- **Updated README.md** / 更新 README.md
+  - Removed misleading "GLM-4.7-Flash integration" references / 移除误导性的"集成 GLM-4.7-Flash"描述
+  - Updated AI model description to "OpenAI-compatible API support" / 更新为"支持 OpenAI 兼容 API"
+  - Updated contact email to hougelangley1987@gmail.com / 更新联系邮箱
+
+### Changed | 变更
+- Improved architecture diagram to reflect API-based AI / 改进架构图以反映基于 API 的 AI
+- Updated project documentation structure / 更新项目文档结构
+
+---
+
+## [Unreleased] - Future Plans
+
+### Planned Features | 计划功能
+- Additional Linux distribution support / 额外 Linux 发行版支持
+- Web-based installation wizard / 基于 Web 的安装向导
+- Mobile app companion / 移动应用伴侣
+- Multi-language knowledge base / 多语言知识库
+
+### Changed | 变更
+
+#### Python Version Upgrade | Python 版本升级
+
+### Changed | 变更
+
+#### Python Version Upgrade | Python 版本升级
+- **Upgraded from Python 3.11 to Python 3.12** / 从 Python 3.11 升级到 3.12
+  - Updated base image: `python:3.11-slim` → `python:3.12-slim-bookworm` / 更新基础镜像
+  - Improved Dockerfile with better layer caching and environment variables / 优化 Dockerfile
+  - Added `libpq-dev` for better PostgreSQL compatibility / 添加 PostgreSQL 开发库
+
+#### Dependencies Update | 依赖更新
+- Updated all Python packages to versions compatible with Python 3.12 / 更新所有包到 3.12 兼容版本
+  - FastAPI: 0.104.1 → 0.109.2
+  - Uvicorn: 0.24.0 → 0.27.1
+  - SQLAlchemy: 2.0.23 → 2.0.27
+  - Pydantic: 2.5.0 → 2.6.1
+  - And other dependencies / 以及其他依赖
+
+#### Code Refactoring | 代码重构
+- Added `from __future__ import annotations` for improved type hints / 添加 future annotations
+- Simplified and cleaned up code in core modules / 简化核心模块代码
+  - `main.py`: Better organization and type hints / 更好的组织和类型提示
+  - `config.py`: Improved validation and structure / 改进验证和结构
+  - `ai_service.py`: Cleaner service layer / 更干净的服务层
+  - `medical_case_service.py`: Better type annotations / 更好的类型注解
+- Removed unnecessary comments while keeping essential documentation / 移除不必要注释
+- Made code more Pythonic and elegant / 代码更 Pythonic 和优雅
+
+### Technical Details | 技术细节
+
+**Dockerfile Improvements:**
+- Use `python:3.12-slim-bookworm` base image
+- Set environment variables: `PYTHONDONTWRITEBYTECODE=1`, `PYTHONUNBUFFERED=1`
+- Add `PIP_NO_CACHE_DIR=1` and `PIP_DISABLE_PIP_VERSION_CHECK=1`
+- Install `libpq-dev` for PostgreSQL compatibility
+- Better cleanup with `apt-get clean` and `rm -rf`
+- Multi-stage optimization / 多阶段优化
+
+**Performance Benefits of Python 3.12:**
+- 5-10% faster overall performance / 整体性能提升 5-10%
+- Improved f-string parsing and error messages / 改进的 f-string 解析和错误信息
+- Better memory efficiency / 更好的内存效率
+- Enhanced type parameter syntax support / 增强的类型参数语法支持
+
+---
+
 ## [1.0.2] - 2025-02-01
 
 ### Added | 新增

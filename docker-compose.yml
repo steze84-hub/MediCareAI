@@ -39,6 +39,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - USE_CN_MIRROR=${USE_CN_MIRROR:-false}
     container_name: medicare_backend
     env_file:
       - .env
@@ -49,7 +51,7 @@ services:
       MINERU_TOKEN: ${MINERU_TOKEN}
       AI_API_KEY: ${AI_API_KEY}
       AI_API_URL: ${AI_API_URL}
-      DEBUG: true
+      DEBUG: "true"
     ports:
       - "0.0.0.0:8000:8000"
     volumes:
@@ -63,6 +65,10 @@ services:
     networks:
       - medicare_network
     restart: unless-stopped
+    # DNS configuration for container networking
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
   # 前端应用
   frontend:

@@ -1,11 +1,16 @@
 """
-AI 服务 - 集成 GLM-4.7-Flash（llama.cpp API）
-完整工作流：个人信息 + 诊疗提交信息 + 知识库信息 -> AI 诊断
+AI Service - Integration with GLM-4.7-Flash (llama.cpp API)
+Complete workflow: personal info + medical submission + knowledge base -> AI diagnosis
 """
-import httpx
-import logging
+
+from __future__ import annotations
+
 import json
-from typing import Dict, Any, Optional, AsyncGenerator
+import logging
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
+import httpx
+
 from app.core.config import settings
 from app.services.knowledge_base_service import get_knowledge_loader
 
@@ -13,21 +18,20 @@ logger = logging.getLogger(__name__)
 
 
 class AIService:
-    """AI 服务类 - 使用 llama.cpp API，支持流式输出"""
-
-    async def chat_with_glm(self, messages: list) -> Dict[str, Any]:
+    """AI Service class using llama.cpp API with streaming support."""
+    
+    async def chat_with_glm(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
         """
-        使用 GLM-4.7-Flash 进行对话（llama.cpp API 格式）
-
+        Chat with GLM-4.7-Flash using llama.cpp API format.
+        
         Args:
-            messages: 对话消息列表
-
+            messages: List of conversation messages
+            
         Returns:
-            API 响应结果
+            API response result
         """
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
-                # llama.cpp API 格式
                 response = await client.post(
                     f"{settings.ai_api_url}chat/completions",
                     headers={
@@ -45,10 +49,8 @@ class AIService:
 
                 if response.status_code == 200:
                     result = response.json()
-                    # llama.cpp 返回格式与 OpenAI 兼容
-                    if 'choices' in result and len(result['choices']) > 0:
+                    if 'choices' in result and result['choices']:
                         message = result['choices'][0]['message']
-                        # 优先使用 reasoning_content（思考链模型）
                         content = message.get('reasoning_content') or message.get('content', '')
                         return {
                             "success": True,
@@ -71,29 +73,23 @@ class AIService:
 
         except httpx.TimeoutException:
             logger.error("GLM API timeout")
-            return {
-                "success": False,
-                "error": "Request timeout"
-            }
+            return {"success": False, "error": "Request timeout"}
         except Exception as e:
             logger.error(f"GLM API error: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
-    async def chat_with_glm_stream(self, messages: list) -> AsyncGenerator[str, None]:
+    async def chat_with_glm_stream(self, messages: List[Dict[str, str]]) -> AsyncGenerator[str, None]:
         """
-        使用 Nemotron-3-Nano-30B 进行流式对话
-
+        Stream chat with GLM-4.7-Flash using llama.cpp API format.
+        
         Args:
-            messages: 对话消息列表
-
+            messages: List of conversation messages
+            
         Yields:
-            流式输出的文本块
+            Streaming text chunks
         """
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            async with httpx.AsyncClient(timeout=300.0) as client:
                 async with client.stream(
                     "POST",
                     f"{settings.ai_api_url}chat/completions",
@@ -117,7 +113,7 @@ class AIService:
                                     break
                                 try:
                                     data = json.loads(data_str)
-                                    if 'choices' in data and len(data['choices']) > 0:
+                                    if 'choices' in data and data['choices']:
                                         delta = data['choices'][0].get('delta', {})
                                         content = delta.get('content', '')
                                         if content:
@@ -138,30 +134,25 @@ class AIService:
 
     async def query_knowledge_base(self, symptoms: str, disease_category: str = "respiratory") -> Dict[str, Any]:
         """
-        查询知识库获取相关疾病信息
-
+        Query knowledge base for relevant disease information.
+        
         Args:
-            symptoms: 症状描述
-            disease_category: 疾病分类，默认呼吸系统
-
+            symptoms: Symptom description
+            disease_category: Disease category, default respiratory
+            
         Returns:
-            知识库信息
+            Knowledge base information
         """
         try:
             loader = get_knowledge_loader()
-            
-            # 加载指定分类的知识库
             kb_data = loader.load_base(disease_category)
             
-            # 提取相关疾病信息（简单匹配症状关键词）
             diseases = kb_data.get('diseases', [])
             guidelines = kb_data.get('guidelines', [])
             
-            # 构建知识库上下文
             knowledge_context = []
             
-            # 添加疾病信息
-            for disease in diseases[:3]:  # 取前3个最相关的
+            for disease in diseases[:3]:
                 disease_info = f"""
 疾病名称: {disease.get('name', '未知')}
 症状: {', '.join(disease.get('symptoms', [])[:5])}
@@ -170,9 +161,8 @@ class AIService:
 """
                 knowledge_context.append(disease_info)
             
-            # 添加指南信息
             guideline_context = []
-            for guideline in guidelines[:2]:  # 取前2个指南
+            for guideline in guidelines[:2]:
                 guide_info = f"""
 指南: {guideline.get('name', '未知')}
 来源: {guideline.get('source', '未知')}
@@ -188,7 +178,7 @@ class AIService:
             }
             
         except Exception as e:
-            logger.error(f"知识库查询失败: {str(e)}")
+            logger.error(f"Knowledge base query failed: {str(e)}")
             return {
                 "success": False,
                 "error": str(e),
@@ -198,13 +188,13 @@ class AIService:
 
     async def extract_document_with_mineru(self, file_url: str) -> Dict[str, Any]:
         """
-        使用 MinerU 提取文档内容
-
+        Extract document content using MinerU.
+        
         Args:
-            file_url: 文件 URL 或文件路径
-
+            file_url: File URL or file path
+            
         Returns:
-            提取结果
+            Extraction result
         """
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
@@ -226,7 +216,7 @@ class AIService:
                         return {
                             "success": True,
                             "data": result.get('data', {}),
-                            "text_content": result.get('data', {}).get('text', '')  # 提取的文本内容
+                            "text_content": result.get('data', {}).get('text', '')
                         }
                     else:
                         logger.error(f"MinerU API error: code={result.get('code')}, msg={result.get('msg')}")
@@ -245,77 +235,71 @@ class AIService:
 
         except httpx.TimeoutException:
             logger.error("MinerU API timeout")
-            return {
-                "success": False,
-                "error": "Request timeout"
-            }
+            return {"success": False, "error": "Request timeout"}
         except Exception as e:
             logger.error(f"MinerU API error: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     async def comprehensive_diagnosis(
-        self, 
+        self,
         symptoms: str,
         patient_info: Dict[str, Any],
         duration: Optional[str] = None,
         severity: Optional[str] = None,
-        uploaded_files: Optional[list] = None,
-        disease_category: str = "respiratory"
+        uploaded_files: Optional[List[str]] = None,
+        disease_category: str = "respiratory",
+        language: str = "zh"
     ) -> Dict[str, Any]:
         """
-        完整诊断工作流
+        Complete diagnosis workflow.
         
-        整合：个人信息 + 诊疗提交信息(MinerU提取) + 知识库信息 -> AI诊断
-
+        Integrates: personal info + medical submission info + knowledge base -> AI diagnosis
+        
         Args:
-            symptoms: 症状描述
-            patient_info: 患者个人信息
-            duration: 症状持续时间
-            severity: 严重程度
-            uploaded_files: 上传的文件列表(会被MinerU提取)
-            disease_category: 疾病分类
-
-        Returns:
-            完整诊断结果
+            language: Language preference - "zh" for Chinese, "en" for English
         """
-        logger.info("开始完整诊断工作流...")
+        logger.info(f"Starting comprehensive diagnosis workflow (language: {language})...")
         
-        # 1. 处理上传的文件（MinerU提取）
+        # Process uploaded files with MinerU
         extracted_texts = []
         if uploaded_files:
-            logger.info(f"正在提取 {len(uploaded_files)} 个文件...")
+            logger.info(f"Extracting {len(uploaded_files)} files...")
             for file_url in uploaded_files:
                 extraction_result = await self.extract_document_with_mineru(file_url)
                 if extraction_result.get('success'):
                     text_content = extraction_result.get('text_content', '')
                     if text_content:
-                        extracted_texts.append(text_content[:2000])  # 限制长度
-                        logger.info(f"文件提取成功，内容长度: {len(text_content)}")
+                        extracted_texts.append(text_content[:2000])
+                        logger.info(f"File extraction successful, content length: {len(text_content)}")
                 else:
-                    logger.warning(f"文件提取失败: {extraction_result.get('error')}")
+                    logger.warning(f"File extraction failed: {extraction_result.get('error')}")
         
-        # 2. 查询知识库
-        logger.info(f"正在查询知识库: {disease_category}...")
+        # Query knowledge base
+        logger.info(f"Querying knowledge base: {disease_category}...")
         kb_result = await self.query_knowledge_base(symptoms, disease_category)
         
-        # 3. 构建完整的提示词
+        # Build complete prompt
         prompt = self._build_diagnosis_prompt(
             patient_info=patient_info,
             symptoms=symptoms,
             duration=duration,
             severity=severity,
             extracted_texts=extracted_texts,
-            knowledge_base=kb_result
+            knowledge_base=kb_result,
+            language=language
         )
         
-        logger.info("正在调用AI模型进行诊断...")
+        logger.info("Calling AI model for diagnosis...")
         
-        # 4. 调用AI进行诊断
+        # 根据语言选择系统提示词
+        if language == "zh":
+            system_prompt = "你是一位经验丰富的全科医生。请根据患者信息、症状描述、相关检查数据和医疗知识库提供专业的中文诊断。请确保你的回答使用中文。"
+        else:
+            system_prompt = "You are a professional general practitioner with rich clinical experience. Please provide professional diagnosis in English based on the patient information, symptom description, relevant examination data and medical knowledge base. Please ensure your answer is in English."
+        
+        # Call AI for diagnosis
         messages = [
-            {"role": "system", "content": "你是一位专业的全科医生，拥有丰富的临床经验。请根据提供的患者信息、症状描述、相关检查资料和医学知识库，给出专业的诊断意见。"},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
         ]
         
@@ -338,69 +322,87 @@ class AIService:
             return {
                 "success": False,
                 "error": result.get('error'),
-                "diagnosis": "AI 分析失败，请稍后重试"
+                "diagnosis": "AI analysis failed, please try again later"
             }
 
     async def comprehensive_diagnosis_stream(
-        self, 
+        self,
         symptoms: str,
         patient_info: Dict[str, Any],
         duration: Optional[str] = None,
         severity: Optional[str] = None,
-        uploaded_files: Optional[list] = None,
-        disease_category: str = "respiratory"
+        uploaded_files: Optional[List[str]] = None,
+        disease_category: str = "respiratory",
+        language: str = "zh"
     ) -> AsyncGenerator[str, None]:
         """
-        完整诊断工作流（流式输出）
+        Complete diagnosis workflow (streaming).
         
-        整合：个人信息 + 诊疗提交信息(MinerU提取) + 知识库信息 -> AI诊断（流式）
-
+        Integrates: personal info + medical submission info + knowledge base -> AI diagnosis (streaming)
+        
         Args:
-            symptoms: 症状描述
-            patient_info: 患者个人信息
-            duration: 症状持续时间
-            severity: 严重程度
-            uploaded_files: 上传的文件列表(会被MinerU提取)
-            disease_category: 疾病分类
-
-        Yields:
-            流式输出的诊断文本块
+            language: Language preference - "zh" for Chinese, "en" for English
         """
-        logger.info("开始完整诊断工作流（流式）...")
+        logger.info(f"Starting comprehensive diagnosis workflow (streaming, language: {language})...")
         
-        # 1. 处理上传的文件（MinerU提取）
+        # Process uploaded files with MinerU
         extracted_texts = []
         if uploaded_files:
-            logger.info(f"正在提取 {len(uploaded_files)} 个文件...")
+            logger.info(f"Extracting {len(uploaded_files)} files...")
             for file_url in uploaded_files:
                 extraction_result = await self.extract_document_with_mineru(file_url)
                 if extraction_result.get('success'):
                     text_content = extraction_result.get('text_content', '')
                     if text_content:
                         extracted_texts.append(text_content[:2000])
-                        logger.info(f"文件提取成功，内容长度: {len(text_content)}")
+                        logger.info(f"File extraction successful, content length: {len(text_content)}")
                 else:
-                    logger.warning(f"文件提取失败: {extraction_result.get('error')}")
+                    logger.warning(f"File extraction failed: {extraction_result.get('error')}")
         
-        # 2. 查询知识库
-        logger.info(f"正在查询知识库: {disease_category}...")
+        # Query knowledge base
+        logger.info(f"Querying knowledge base: {disease_category}...")
         kb_result = await self.query_knowledge_base(symptoms, disease_category)
         
-        # 3. 构建完整的提示词
+        # Build complete prompt
         prompt = self._build_diagnosis_prompt(
             patient_info=patient_info,
             symptoms=symptoms,
             duration=duration,
             severity=severity,
             extracted_texts=extracted_texts,
-            knowledge_base=kb_result
+            knowledge_base=kb_result,
+            language=language
         )
         
-        logger.info("正在调用AI模型进行流式诊断...")
+        logger.info("Calling AI model for streaming diagnosis...")
         
-        # 4. 调用AI进行流式诊断
+        # 根据语言选择系统提示词
+        if language == "zh":
+            system_prompt = """你是一位经验丰富的全科医生。请根据患者信息、症状描述、相关检查数据和医疗知识库提供专业的中文诊断。
+
+请确保你的回答完整，包括：
+1) 初步诊断（按可能性排序的表格）
+2) 详细分析
+3) 建议检查项目
+4) 治疗方案
+5) 注意事项
+
+请使用中文回答。"""
+        else:
+            system_prompt = """You are a professional general practitioner with rich clinical experience. Please provide professional diagnosis in English based on the patient information, symptom description, relevant examination data and medical knowledge base.
+
+Please ensure your answer is complete, including:
+1) Preliminary diagnosis (table sorted by probability)
+2) Detailed analysis
+3) Recommended examinations
+4) Treatment plan
+5) Precautions
+
+Please answer in English."""
+        
+        # Call AI for streaming diagnosis
         messages = [
-            {"role": "system", "content": "你是一位专业的全科医生，拥有丰富的临床经验。请根据提供的患者信息、症状描述、相关检查资料和医学知识库，给出专业的诊断意见。请确保回答完整，包含：1）初步诊断（按可能性排序的表格）；2）详细分析说明；3）建议检查项目；4）治疗建议；5）注意事项。"},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
         ]
         
@@ -411,7 +413,7 @@ class AIService:
             total_chars += len(chunk)
             yield chunk
         
-        logger.info(f"流式诊断完成，共 {chunk_count} 个 chunks，{total_chars} 个字符")
+        logger.info(f"Streaming diagnosis completed, {chunk_count} chunks, {total_chars} characters")
 
     def _build_diagnosis_prompt(
         self,
@@ -419,103 +421,175 @@ class AIService:
         symptoms: str,
         duration: Optional[str],
         severity: Optional[str],
-        extracted_texts: list,
-        knowledge_base: Dict[str, Any]
+        extracted_texts: List[str],
+        knowledge_base: Dict[str, Any],
+        language: str = "zh"
     ) -> str:
         """
-        构建诊断提示词
+        Build diagnosis prompt.
         
-        结构：个人信息 + 诊疗提交信息 + 知识库信息
+        Structure: personal info + medical submission info + knowledge base info
+        
+        Args:
+            language: Language preference - "zh" for Chinese, "en" for English
         """
         prompt_parts = []
         
-        # === 第一部分：个人信息 ===
-        prompt_parts.append("=" * 50)
-        prompt_parts.append("【第一部分：患者个人信息】")
-        prompt_parts.append("=" * 50)
-        
-        if patient_info:
-            prompt_parts.append(f"姓名: {patient_info.get('full_name', '未知')}")
-            prompt_parts.append(f"性别: {patient_info.get('gender', '未知')}")
-            prompt_parts.append(f"出生日期: {patient_info.get('date_of_birth', '未知')}")
-            prompt_parts.append(f"联系电话: {patient_info.get('phone', '未知')}")
-            prompt_parts.append(f"紧急联系人: {patient_info.get('emergency_contact', '未知')}")
-            prompt_parts.append(f"居住地址: {patient_info.get('address', '未知')}")
-            prompt_parts.append(f"备注信息: {patient_info.get('notes', '无')}")
-        else:
-            prompt_parts.append("暂无详细的个人信息")
-        
-        # === 第二部分：诊疗提交信息 ===
-        prompt_parts.append("\n" + "=" * 50)
-        prompt_parts.append("【第二部分：诊疗提交信息】")
-        prompt_parts.append("=" * 50)
-        
-        prompt_parts.append(f"\n症状描述:\n{symptoms}")
-        
-        if duration:
-            prompt_parts.append(f"\n症状持续时间: {duration}")
-        
-        if severity:
-            prompt_parts.append(f"严重程度: {severity}")
-        
-        # 添加MinerU提取的文件内容
-        if extracted_texts:
-            prompt_parts.append("\n--- 上传的检查报告/资料（经MinerU提取）---")
-            for i, text in enumerate(extracted_texts, 1):
-                prompt_parts.append(f"\n[文件 {i} 内容]:")
-                prompt_parts.append(text[:1500])  # 每个文件限制1500字符
-        
-        # === 第三部分：知识库信息 ===
-        prompt_parts.append("\n" + "=" * 50)
-        prompt_parts.append("【第三部分：医学知识库参考】")
-        prompt_parts.append("=" * 50)
-        
-        if knowledge_base.get('success'):
-            if knowledge_base.get('diseases_info'):
-                prompt_parts.append("\n[相关疾病信息]:")
-                prompt_parts.append(knowledge_base['diseases_info'])
+        # 根据语言选择文本
+        if language == "zh":
+            # 中文版本
+            prompt_parts.append("=" * 50)
+            prompt_parts.append("【第1部分：患者个人信息】")
+            prompt_parts.append("=" * 50)
             
-            if knowledge_base.get('guidelines_info'):
-                prompt_parts.append("\n[诊疗指南参考]:")
-                prompt_parts.append(knowledge_base['guidelines_info'])
-        else:
-            prompt_parts.append("\n（知识库暂时无法访问，基于通用医学知识进行分析）")
-        
-        # === 诊断要求 ===
-        prompt_parts.append("\n" + "=" * 50)
-        prompt_parts.append("【诊断要求】")
-        prompt_parts.append("=" * 50)
-        prompt_parts.append("""
-请基于以上三部分信息，提供以下诊断内容：
+            if patient_info:
+                prompt_parts.append(f"姓名: {patient_info.get('full_name', '未知')}")
+                prompt_parts.append(f"性别: {patient_info.get('gender', '未知')}")
+                prompt_parts.append(f"出生日期: {patient_info.get('date_of_birth', '未知')}")
+                prompt_parts.append(f"电话: {patient_info.get('phone', '未知')}")
+                prompt_parts.append(f"紧急联系人: {patient_info.get('emergency_contact', '未知')}")
+                prompt_parts.append(f"地址: {patient_info.get('address', '未知')}")
+                prompt_parts.append(f"备注: {patient_info.get('notes', '无')}")
+            else:
+                prompt_parts.append("无详细的个人信息")
+            
+            # Part 2: Medical Submission Information
+            prompt_parts.append("\n" + "=" * 50)
+            prompt_parts.append("【第2部分：诊疗提交信息】")
+            prompt_parts.append("=" * 50)
+            
+            prompt_parts.append(f"\n症状描述:\n{symptoms}")
+            
+            if duration:
+                prompt_parts.append(f"\n症状持续时间: {duration}")
+            
+            if severity:
+                prompt_parts.append(f"\n严重程度: {severity}")
+            
+            # Add MinerU extracted file content
+            if extracted_texts:
+                prompt_parts.append("\n--- 上传的检查报告/材料 (通过MinerU提取) ---")
+                for i, text in enumerate(extracted_texts, 1):
+                    prompt_parts.append(f"\n[文件 {i} 内容]:")
+                    prompt_parts.append(text[:1500])
+            
+            # Part 3: Knowledge Base Information
+            prompt_parts.append("\n" + "=" * 50)
+            prompt_parts.append("【第3部分：医疗知识库参考】")
+            prompt_parts.append("=" * 50)
+            
+            if knowledge_base.get('success'):
+                if knowledge_base.get('diseases_info'):
+                    prompt_parts.append("\n[相关疾病信息]:")
+                    prompt_parts.append(knowledge_base['diseases_info'])
+                
+                if knowledge_base.get('guidelines_info'):
+                    prompt_parts.append("\n[治疗指南参考]:")
+                    prompt_parts.append(knowledge_base['guidelines_info'])
+            else:
+                prompt_parts.append("\n(知识库暂时不可用，基于通用医疗知识进行分析)")
+            
+            # Diagnosis Requirements
+            prompt_parts.append("\n" + "=" * 50)
+            prompt_parts.append("【诊断要求】")
+            prompt_parts.append("=" * 50)
+            prompt_parts.append("""
+请根据以上三部分内容提供以下中文诊断内容：
 
-1. **初步诊断**：基于症状和检查资料给出可能的诊断（按可能性排序）
-2. **诊断依据**：结合知识库说明诊断理由
+1. **初步诊断**：根据症状和检查数据提供可能的诊断（按可能性排序）
+2. **诊断依据**：结合知识库解释诊断推理
 3. **鉴别诊断**：列出需要排除的其他疾病
-4. **建议检查**：列出建议做的进一步检查
-5. **治疗方案**：基于知识库给出治疗建议
+4. **建议检查**：列出推荐的进一步检查
+5. **治疗方案**：基于知识库的治疗建议
 6. **注意事项**：用药提醒、生活建议等
 7. **就医建议**：是否需要立即就医，建议就诊科室
 
 请注意：
-- 诊断仅供参考，不能替代专业医生的面诊
+- 诊断仅供参考，不能替代专业医生的诊疗
 - 如有紧急情况，请立即就医
-- 结合患者个人信息（如过敏史）给出个性化建议
+- 根据患者个人信息（如过敏史等）提供个性化建议
+""")
+        else:
+            # English version
+            prompt_parts.append("=" * 50)
+            prompt_parts.append("【Part 1: Patient Personal Information】")
+            prompt_parts.append("=" * 50)
+            
+            if patient_info:
+                prompt_parts.append(f"Name: {patient_info.get('full_name', 'Unknown')}")
+                prompt_parts.append(f"Gender: {patient_info.get('gender', 'Unknown')}")
+                prompt_parts.append(f"Date of Birth: {patient_info.get('date_of_birth', 'Unknown')}")
+                prompt_parts.append(f"Phone: {patient_info.get('phone', 'Unknown')}")
+                prompt_parts.append(f"Emergency Contact: {patient_info.get('emergency_contact', 'Unknown')}")
+                prompt_parts.append(f"Address: {patient_info.get('address', 'Unknown')}")
+                prompt_parts.append(f"Notes: {patient_info.get('notes', 'None')}")
+            else:
+                prompt_parts.append("No detailed personal information available")
+            
+            # Part 2: Medical Submission Information
+            prompt_parts.append("\n" + "=" * 50)
+            prompt_parts.append("【Part 2: Medical Submission Information】")
+            prompt_parts.append("=" * 50)
+            
+            prompt_parts.append(f"\nSymptom Description:\n{symptoms}")
+            
+            if duration:
+                prompt_parts.append(f"\nSymptom Duration: {duration}")
+            
+            if severity:
+                prompt_parts.append(f"\nSeverity: {severity}")
+            
+            # Add MinerU extracted file content
+            if extracted_texts:
+                prompt_parts.append("\n--- Uploaded examination reports/materials (extracted by MinerU) ---")
+                for i, text in enumerate(extracted_texts, 1):
+                    prompt_parts.append(f"\n[File {i} content]:")
+                    prompt_parts.append(text[:1500])
+            
+            # Part 3: Knowledge Base Information
+            prompt_parts.append("\n" + "=" * 50)
+            prompt_parts.append("【Part 3: Medical Knowledge Base Reference】")
+            prompt_parts.append("=" * 50)
+            
+            if knowledge_base.get('success'):
+                if knowledge_base.get('diseases_info'):
+                    prompt_parts.append("\n[Relevant Disease Information]:")
+                    prompt_parts.append(knowledge_base['diseases_info'])
+                
+                if knowledge_base.get('guidelines_info'):
+                    prompt_parts.append("\n[Treatment Guidelines Reference]:")
+                    prompt_parts.append(knowledge_base['guidelines_info'])
+            else:
+                prompt_parts.append("\n(Knowledge base temporarily unavailable, analyzing based on general medical knowledge)")
+            
+            # Diagnosis Requirements
+            prompt_parts.append("\n" + "=" * 50)
+            prompt_parts.append("【Diagnosis Requirements】")
+            prompt_parts.append("=" * 50)
+            prompt_parts.append("""
+Please provide the following diagnosis content based on the three parts above:
+
+1. **Preliminary Diagnosis**: Possible diagnoses based on symptoms and examination data (sorted by probability)
+2. **Diagnosis Basis**: Explain diagnosis reasoning combined with knowledge base
+3. **Differential Diagnosis**: List other diseases to exclude
+4. **Recommended Examinations**: List further examinations to recommend
+5. **Treatment Plan**: Treatment recommendations based on knowledge base
+6. **Precautions**: Medication reminders, lifestyle suggestions, etc.
+7. **Medical Advice**: Whether immediate medical attention is needed, recommended departments
+
+Please note:
+- Diagnosis is for reference only and cannot replace professional doctor's consultation
+- In case of emergency, seek medical attention immediately
+- Provide personalized suggestions based on patient personal information (such as allergy history)
 """)
         
         return "\n".join(prompt_parts)
 
     async def analyze_symptoms(self, symptoms: str, patient_info: Optional[Dict] = None) -> Dict[str, Any]:
         """
-        AI 分析症状（简化版，向后兼容）
-
-        Args:
-            symptoms: 症状描述
-            patient_info: 患者信息（可选）
-
-        Returns:
-            AI 分析结果
+        AI analyze symptoms (simplified version, backward compatible)
         """
-        # 调用完整的诊断流程
+        # Call complete diagnosis workflow
         result = await self.comprehensive_diagnosis(
             symptoms=symptoms,
             patient_info=patient_info or {}
@@ -530,13 +604,7 @@ class AIService:
 
     async def extract_medical_report(self, file_url: str) -> Dict[str, Any]:
         """
-        提取医疗报告内容
-
-        Args:
-            file_url: 文件 URL
-
-        Returns:
-            结构化的医疗报告数据
+        Extract medical report content
         """
         result = await self.extract_document_with_mineru(file_url)
 
@@ -551,5 +619,5 @@ class AIService:
         }
 
 
-# 全局实例
+# Global instance
 ai_service = AIService()

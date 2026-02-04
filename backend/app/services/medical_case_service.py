@@ -1,17 +1,22 @@
 """
-病历服务 - 管理诊疗记录
+Medical Case Service - Manage medical records
 """
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from typing import List, Optional, Dict, Any
-from app.models.models import MedicalCase, Patient, Disease
+
+from __future__ import annotations
+
 import uuid
+from typing import List, Optional
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.models import Disease, MedicalCase, Patient
 
 
 class MedicalCaseService:
-    """病历服务类"""
+    """Medical case service class."""
     
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession) -> None:
         self.db = db
     
     async def create_medical_case(
@@ -21,25 +26,25 @@ class MedicalCaseService:
         symptoms: str,
         diagnosis: str,
         severity: str = "moderate",
-        description: str = None,
-        disease_id: uuid.UUID = None
+        description: Optional[str] = None,
+        disease_id: Optional[uuid.UUID] = None
     ) -> MedicalCase:
         """
-        创建病历记录
+        Create medical case record
         
         Args:
-            patient_id: 患者ID
-            title: 病历标题
-            symptoms: 症状描述
-            diagnosis: 诊断结果
-            severity: 严重程度
-            description: 详细描述
-            disease_id: 疾病ID（可选）
+            patient_id: Patient ID
+            title: Medical case title
+            symptoms: Symptom description
+            diagnosis: Diagnosis result
+            severity: Severity level
+            description: Detailed description
+            disease_id: Disease ID (optional)
             
         Returns:
-            创建的病历记录
+            Created medical case record
         """
-        # 如果没有提供疾病ID，查询或创建默认疾病
+        # Query or create default disease if not provided
         if not disease_id:
             stmt = select(Disease).limit(1)
             result = await self.db.execute(stmt)
@@ -48,15 +53,15 @@ class MedicalCaseService:
             if disease:
                 disease_id = disease.id
             else:
-                # 创建默认疾病记录
+                # Create default disease record
                 default_disease = Disease(
                     id=uuid.uuid4(),
-                    name="未分类疾病",
+                    name="Unclassified Disease",
                     code="UNC",
-                    description="默认分类，用于未明确诊断的疾病"
+                    description="Default category for diseases without clear diagnosis"
                 )
                 self.db.add(default_disease)
-                await self.db.flush()  # flush但不提交，获取ID
+                await self.db.flush()  # flush without commit to get ID
                 disease_id = default_disease.id
         
         medical_case = MedicalCase(
@@ -64,7 +69,7 @@ class MedicalCaseService:
             patient_id=patient_id,
             disease_id=disease_id,
             title=title,
-            description=description or symptoms[:200],  # 如果没有描述，使用症状前200字
+            description=description or symptoms[:200],  # Use first 200 chars of symptoms if no description
             symptoms=symptoms,
             diagnosis=diagnosis,
             severity=severity,
@@ -84,15 +89,15 @@ class MedicalCaseService:
         limit: int = 20
     ) -> List[MedicalCase]:
         """
-        获取患者的所有病历记录
+        Get all medical cases for a patient
         
         Args:
-            patient_id: 患者ID
-            skip: 跳过记录数
-            limit: 返回记录数
+            patient_id: Patient ID
+            skip: Number of records to skip
+            limit: Number of records to return
             
         Returns:
-            病历记录列表
+            List of medical case records
         """
         stmt = (
             select(MedicalCase)
@@ -111,14 +116,14 @@ class MedicalCaseService:
         patient_id: uuid.UUID
     ) -> Optional[MedicalCase]:
         """
-        根据ID获取病历记录
+        Get medical case by ID
         
         Args:
-            case_id: 病历ID
-            patient_id: 患者ID（用于权限验证）
+            case_id: Medical case ID
+            patient_id: Patient ID (for permission verification)
             
         Returns:
-            病历记录或None
+            Medical case record or None
         """
         stmt = (
             select(MedicalCase)
@@ -136,13 +141,13 @@ class MedicalCaseService:
         patient_id: uuid.UUID
     ) -> int:
         """
-        统计患者的病历数量
+        Count medical cases for a patient
         
         Args:
-            patient_id: 患者ID
+            patient_id: Patient ID
             
         Returns:
-            病历数量
+            Number of medical cases
         """
         stmt = (
             select(func.count(MedicalCase.id))
@@ -159,15 +164,15 @@ class MedicalCaseService:
         status: str
     ) -> Optional[MedicalCase]:
         """
-        更新病历状态
+        Update medical case status
         
         Args:
-            case_id: 病历ID
-            patient_id: 患者ID（用于权限验证）
-            status: 新状态 ('active', 'completed', 'closed')
+            case_id: Medical case ID
+            patient_id: Patient ID (for permission verification)
+            status: New status ('active', 'completed', 'closed')
             
         Returns:
-            更新后的病历记录或None
+            Updated medical case record or None
         """
         medical_case = await self.get_medical_case_by_id(case_id, patient_id)
         

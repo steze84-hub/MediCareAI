@@ -1,0 +1,91 @@
+version: '3.8'
+
+# 生产环境 Docker Compose 配置
+# 特点：
+# 1. Nginx 直接服务静态文件（无需 frontend 容器）
+# 2. 更适合网络受限环境
+# 3. 更少的资源占用
+# 4. 启动速度更快
+
+services:
+  # Nginx 反向代理 + 静态文件服务
+  nginx:
+    volumes:
+      # 使用静态文件配置
+      - ./docker/nginx/nginx-static.conf:/etc/nginx/nginx.conf:ro
+      # 前端静态文件
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    networks:
+      - medicare_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # 后端 API（生产优化）
+  backend:
+    environment:
+      # 生产环境关闭调试
+      DEBUG: "false"
+      # 启用 Gunicorn（生产服务器）
+      WEB_CONCURRENCY: 4
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # PostgreSQL（生产优化）
+  postgres:
+    environment:
+      # 生产环境密码（部署前修改！）
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medicare_secure_password_2026}
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medicare_user -d medicare_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis（生产优化）
+  redis:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+# 不使用 frontend 容器（生产环境）
+# frontend 服务已在基础 docker-compose.yml 中定义
+# 此配置文件覆盖 nginx 配置即可
+
+# 注意：部署前请确保：
+# 1. 修改默认密码
+# 2. 配置 SSL 证书
+# 3. 设置正确的 AI_API_URL
+# 4. 配置防火墙规则

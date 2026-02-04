@@ -634,6 +634,7 @@
                         <div class="duration-select-wrapper">
                             <select id="duration_unit">
                                 <option value="">选择单位</option>
+                                <option value="分钟">分钟</option>
                                 <option value="小时">小时</option>
                                 <option value="天">天</option>
                                 <option value="周">周</option>
@@ -832,6 +833,10 @@
             resultDiv.innerHTML = '<span class="spinner"></span> AI正在实时分析您的症状...';
 
             try {
+                // 检测当前语言（根据页面语言属性）
+                const pageLang = document.documentElement.lang || 'zh-CN';
+                const language = pageLang.startsWith('zh') ? 'zh' : 'en';
+                
                 // 调用流式AI诊断API
                 const response = await fetch(`${API_BASE}/api/v1/ai/comprehensive-diagnosis-stream`, {
                     method: 'POST',
@@ -847,7 +852,8 @@
                         triggers: triggers,
                         previous_diseases: previousDiseases,
                         uploaded_files: [],
-                        disease_category: 'respiratory'
+                        disease_category: 'respiratory',
+                        language: language
                     })
                 });
 
@@ -898,6 +904,12 @@
                                 if (data.done) {
                                     // 流式输出完成
                                     caseId = data.case_id;
+                                    window.diagnosisInfo = {
+                                        case_id: data.case_id,
+                                        model_used: data.model_used,
+                                        tokens_used: data.tokens_used,
+                                        created_at: data.created_at
+                                    };
                                     document.getElementById('streamingStatus').innerHTML = 
                                         '<span style="color: #28a745;">✓ 诊断完成</span>';
                                     
@@ -983,6 +995,13 @@
                 
                 // 使用 marked.js 将 Markdown 转换为 HTML
                 const formattedDiagnosis = marked.parse(diagnosisText);
+                
+                // 获取诊断信息（从 window.diagnosisInfo 或 result）
+                const info = window.diagnosisInfo || {};
+                const caseId = info.case_id || result.case_id || 'N/A';
+                const modelUsed = info.model_used || 'unsloth/GLM-4.7-Flash-GGUF:BF16';
+                const tokensUsed = info.tokens_used || 0;
+                const createdAt = info.created_at ? new Date(info.created_at).toLocaleString('zh-CN') : new Date().toLocaleString('zh-CN');
 
                 diagnosisContent.innerHTML = `
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
@@ -993,10 +1012,10 @@
                     </div>
                     <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; font-size: 14px;">
                         <strong>📊 诊断信息：</strong><br>
-                        病例ID: ${result.case_id || 'N/A'}<br>
-                        模型: ${result.model_used || 'N/A'}<br>
-                        Token用量: ${result.tokens_used || 0}<br>
-                        诊断时间: ${new Date(result.created_at).toLocaleString('zh-CN')}
+                        病例ID: ${caseId}<br>
+                        模型: ${modelUsed}<br>
+                        Token用量: ${tokensUsed}<br>
+                        诊断时间: ${createdAt}
                     </div>
                 `;
             } else if (data.diagnosis) {

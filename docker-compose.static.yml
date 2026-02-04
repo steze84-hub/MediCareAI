@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  # Nginx反向代理 - 静态文件版本
+  nginx:
+    volumes:
+      - ./docker/nginx/nginx-static.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    networks:
+      - medicare_network
+    restart: unless-stopped

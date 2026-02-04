@@ -20,6 +20,10 @@
   <img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" alt="License">
 </p>
 
+<p align="center">
+  <strong>作者 Author: 苏业钦 (Su Yeqin)</strong>
+</p>
+
 ---
 
 ## 🌐 语言选择 / Language Selection
@@ -37,7 +41,7 @@
 
 - **🔐 用户认证与管理** - JWT 安全认证，用户注册登录，会话管理
 - **👤 患者档案管理** - 完整的患者信息，病历号管理，紧急联系人
-- **🤖 AI 智能诊断** - 集成 GLM-4.7-Flash 模型，实时症状分析
+- **🤖 AI 智能诊断** - 支持 OpenAI 兼容 API 的 AI 大模型，实时症状分析
 - **📄 文档智能处理** - MinerU 文档抽取，支持 PDF/图片/文档
 - **📊 医疗记录管理** - 病例管理，文档附件，随访计划
 - **🏥 知识库系统** - 模块化医疗指南，循证医学建议
@@ -51,7 +55,7 @@
 
 - **🔐 User Authentication** - JWT secure auth, registration/login, session management
 - **👤 Patient Management** - Complete patient profiles, medical record numbers, emergency contacts
-- **🤖 AI Diagnosis** - GLM-4.7-Flash integration, real-time symptom analysis
+- **🤖 AI Diagnosis** - Support for OpenAI-compatible API AI models, real-time symptom analysis
 - **📄 Document Processing** - MinerU extraction, PDF/image/document support
 - **📊 Medical Records** - Case management, document attachments, follow-up plans
 - **🏥 Knowledge Base** - Modular medical guidelines, evidence-based recommendations
@@ -71,9 +75,9 @@
 **中文:** 全面的患者档案管理，包括个人信息、病史、紧急联系人和病历号分配。
 
 ### 3. 🤖 AI-Powered Diagnosis | AI 智能诊断
-**English:** Integration with GLM-4.7-Flash AI model for real-time symptom analysis, evidence-based recommendations, and follow-up plan generation.
+**English:** Supports OpenAI-compatible API AI models for real-time symptom analysis, evidence-based recommendations, and follow-up plan generation.
 
-**中文:** 集成 GLM-4.7-Flash AI 模型，实现实时症状分析、循证建议生成和随访计划制定。
+**中文:** 支持 OpenAI 兼容 API 的 AI 大模型，实现实时症状分析、循证建议生成和随访计划制定。
 
 ### 4. 📄 Document Processing | 文档处理
 **English:** MinerU integration for intelligent document text extraction from PDFs, images, and medical documents with structured data extraction.
@@ -106,7 +110,45 @@
 - 8GB 以上内存，20GB 以上可用磁盘空间
 - Linux/macOS/Windows (需 WSL2)
 
-### Installation | 安装步骤
+### Option 1: One-Click Installation (Recommended for Linux) | 一键安装（推荐 Linux 用户）
+
+We provide an automated installation script with **multi-language support (English/中文)** that supports 7 Linux distributions:
+
+**Supported Distributions:**
+- Ubuntu 24.04 LTS
+- Fedora 43 Server
+- openSUSE Leap 16.0 / Tumbleweed
+- AOSC OS 13.0.7
+- openEuler 24.03 LTS-SP3
+- Deepin 25
+
+**Features | 功能特性:**
+- 🌍 Multi-language interface (English / 简体中文)
+- 🔍 Automatic distro detection
+- ⚙️ Interactive configuration (AI API, network, ports)
+- 📜 User agreement and risk acknowledgment
+- 🐳 Auto-install Docker and Docker Compose v2
+- 🔧 Auto-handle SELinux/BuildKit compatibility
+- ✅ Health check after deployment
+
+```bash
+# 1. Clone repository / 克隆仓库
+git clone https://github.com/yourusername/MediCare_AI.git
+cd MediCare_AI
+
+# 2. Run the installation script / 运行安装脚本
+sudo ./install.sh
+```
+
+The script will guide you through:
+- System compatibility check / 系统兼容性检查
+- User agreement confirmation / 用户协议确认
+- AI service configuration (optional) / AI 服务配置（可选）
+- Network configuration / 网络配置
+- Automatic Docker installation / 自动安装 Docker
+- Service deployment / 服务部署
+
+### Option 2: Manual Installation | 手动安装
 
 ```bash
 # 1. Clone repository / 克隆仓库
@@ -168,12 +210,12 @@ print('Database initialized!')
 │ (Port 5432)  │ │    (Port 6379)      │ │                │
 └──────────────┘ └─────────────────────┘ └────────────────┘
                             │
-                            ▼
-                   ┌──────────────────┐
-                   │  GLM-4.7-Flash   │
-                   │  (Local AI via   │
-                   │    llama.cpp)    │
-                   └──────────────────┘
+                             ▼
+                    ┌──────────────────┐
+                    │   AI LLM API     │
+                    │ (OpenAI-compatible│
+                    │    API Support)  │
+                    └──────────────────┘
 ```
 
 ### Architecture Components | 架构组件
@@ -183,7 +225,7 @@ print('Database initialized!')
 - **Backend**: FastAPI (Python 3.11) with async SQLAlchemy ORM
 - **Database**: PostgreSQL 17 for data persistence
 - **Cache**: Redis 7.4 for session and data caching
-- **AI Engine**: GLM-4.7-Flash via local llama.cpp deployment
+- **AI Engine**: OpenAI-compatible API support (e.g., GLM-4.7-Flash, GPT models)
 - **Document AI**: MinerU API for intelligent text extraction
 
 **中文:**
@@ -191,7 +233,7 @@ print('Database initialized!')
 - **后端**: FastAPI (Python 3.11)，使用异步 SQLAlchemy ORM
 - **数据库**: PostgreSQL 17 用于数据持久化
 - **缓存**: Redis 7.4 用于会话和数据缓存
-- **AI 引擎**: GLM-4.7-Flash，通过本地 llama.cpp 部署
+- **AI 引擎**: 支持 OpenAI 兼容 API（如 GLM-4.7-Flash、GPT 模型等）
 - **文档 AI**: MinerU API 用于智能文本提取
 
 ---
@@ -450,7 +492,7 @@ copies or substantial portions of the Software.
 
 ## 🙏 Acknowledgments | 致谢
 
-- **GLM-4.7-Flash**: AI model for diagnosis / 诊断 AI 模型
+- **AI LLM**: OpenAI-compatible API support / 支持 OpenAI 兼容 API
 - **MinerU**: Document processing and text extraction / 文档处理和文本提取
 - **FastAPI**: Modern, fast web framework / 现代快速 Web 框架
 - **PostgreSQL**: Powerful open-source database / 强大的开源数据库
