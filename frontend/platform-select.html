@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+    <title>MediCare AI - 选择登录平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .header {
+            margin-bottom: 60px;
+            color: white;
+        }
+
+        .logo {
+            font-size: 72px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .header h1 {
+            font-size: 42px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.95;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .platforms {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .platform-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .platform-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--theme-color) 0%, var(--theme-color-light) 100%);
+        }
+
+        .platform-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .platform-card.patient {
+            --theme-color: #667eea;
+            --theme-color-light: #764ba2;
+        }
+
+        .platform-card.doctor {
+            --theme-color: #11998e;
+            --theme-color-light: #38ef7d;
+        }
+
+        .platform-card.admin {
+            --theme-color: #fc4a1a;
+            --theme-color-light: #f7b733;
+        }
+
+        .platform-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .platform-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .platform-desc {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .platform-features {
+            list-style: none;
+            text-align: left;
+            margin: 20px 0;
+            padding: 0 20px;
+        }
+
+        .platform-features li {
+            padding: 8px 0;
+            color: #555;
+            font-size: 14px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .platform-features li:last-child {
+            border-bottom: none;
+        }
+
+        .platform-features li::before {
+            content: '✓';
+            color: var(--theme-color);
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .platform-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, var(--theme-color) 0%, var(--theme-color-light) 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .platform-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .footer {
+            margin-top: 60px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 32px;
+            }
+            
+            .platforms {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .platform-card {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🏥</div>
+            <h1>MediCare AI</h1>
+            <p>智能疾病管理系统 - 选择您的登录平台<br>Intelligent Disease Management System</p>
+        </div>
+
+        <div class="platforms">
+            <!-- 患者平台 -->
+            <div class="platform-card patient" onclick="goToLogin('patient')">
+                <span class="platform-icon">👤</span>
+                <h2 class="platform-title">患者平台</h2>
+                <p class="platform-desc">提交症状、获取AI诊断建议、管理您的健康档案</p>
+                <ul class="platform-features">
+                    <li>智能症状分析与诊断</li>
+                    <li>诊疗记录管理</li>
+                    <li>文档上传与解析</li>
+                    <li>分享给指定医生</li>
+                </ul>
+                <a href="/login.html?platform=patient" class="platform-btn">进入患者平台</a>
+            </div>
+
+            <!-- 医生平台 -->
+            <div class="platform-card doctor" onclick="goToLogin('doctor')">
+                <span class="platform-icon">👨‍⚕️</span>
+                <h2 class="platform-title">医生平台</h2>
+                <p class="platform-desc">浏览专业领域病例、科研数据导出、患者@病例管理</p>
+                <ul class="platform-features">
+                    <li>浏览匿名化病例</li>
+                    <li>查看@我的病例</li>
+                    <li>科研数据检索与导出</li>
+                    <li>双盲数据收集</li>
+                </ul>
+                <a href="/doctor-login.html" class="platform-btn">进入医生平台</a>
+            </div>
+
+            <!-- 管理平台 -->
+            <div class="platform-card admin" onclick="goToLogin('admin')">
+                <span class="platform-icon">⚙️</span>
+                <h2 class="platform-title">管理平台</h2>
+                <p class="platform-desc">系统监控、AI模型配置、知识库管理、医生认证审核</p>
+                <ul class="platform-features">
+                    <li>系统资源监控</li>
+                    <li>AI模型配置与管理</li>
+                    <li>知识库文档管理</li>
+                    <li>医生资质审核</li>
+                </ul>
+                <a href="/admin-login.html" class="platform-btn">进入管理平台</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>MediCare AI © 2025 | 作者：苏业钦 | MIT License</p>
+            <p style="margin-top: 10px;">🏥 用AI赋能医疗健康，让诊疗更智能、更便捷</p>
+        </div>
+    </div>
+
+    <script>
+        function goToLogin(platform) {
+            // 添加点击动画效果
+            event.currentTarget.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                event.currentTarget.style.transform = '';
+            }, 150);
+        }
+
+        // 页面加载动画
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.platform-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,491 @@
+{/*
+  AGENTS.mdx - AI Assistant Project Context | AI 助手项目上下文
+  
+  This document provides context for AI assistants working on the MediCare_AI project.
+  本文档为在 MediCare_AI 项目上工作的 AI 助手提供上下文。
+  
+  中文在前，英文在后 | Chinese first, English second
+*/}
+
+# AGENTS.mdx - AI 助手项目上下文 | AI Assistant Project Context
+
+## 项目概述 (中文) | Project Overview (English)
+
+**MediCare_AI** 是一个基于人工智能的智能疾病管理系统，专为患者随访和疾病追踪设计。系统整合了医疗指南、AI 智能诊断、医患沟通和文档处理功能，为医疗机构提供全面的健康支持。
+
+**MediCare_AI** is an intelligent disease management system powered by AI, designed for patient follow-up and disease tracking. It combines medical guidelines, AI-powered diagnosis, patient-doctor communication, and document processing to provide comprehensive healthcare support.
+
+### 核心特点 | Key Characteristics
+
+- **三端平台架构**：患者端、医生端、管理员端独立界面和权限
+- **AI 智能诊断**：支持 OpenAI 兼容 API，结合 RAG 检索增强生成
+- **医患双向沟通**：@医生提及系统，支持医生评论和患者回复
+- **阿里云 OSS 存储**：患者病例资料安全云存储
+- **动态知识库**：管理员可创建医疗指南，自动向量化和 RAG 检索
+- **隐私保护**：自动 PII 脱敏，严格的数据访问控制
+
+- **Three-Platform Architecture**: Patient, Doctor, and Admin platforms with separate UIs and permissions
+- **AI-Powered Diagnosis**: Supports OpenAI-compatible APIs with RAG (Retrieval-Augmented Generation)
+- **Bidirectional Communication**: @doctor mention system with doctor comments and patient replies
+- **Alibaba Cloud OSS Storage**: Secure cloud storage for patient case data
+- **Dynamic Knowledge Base**: Admins can create medical guidelines with automatic vectorization and RAG retrieval
+- **Privacy Protection**: Automatic PII cleaning with strict data access controls
+
+---
+
+## 系统架构 | System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Nginx (Reverse Proxy)                        │
+│              (Port 80/443 - SSL/TLS)                            │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        │                   │                   │
+┌───────▼──────┐ ┌──────────▼──────────┐ ┌──────▼──────┐
+│   Frontend   │ │      Backend        │ │    Redis    │
+│  Three       │ │     FastAPI         │ │    Cache    │
+│  Platforms   │ │    Python 3.11      │ │             │
+│ (Patient/    │ │  SQLAlchemy Async   │ │             │
+│ Doctor/      │ │                     │ │             │
+│ Admin)       │ │                     │ │             │
+└──────────────┘ └──────────┬──────────┘ └─────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        │                   │                   │
+┌───────▼──────┐ ┌──────────▼──────────┐ ┌──────▼──────────┐
+│  PostgreSQL  │ │       MinerU        │ │   AI Models     │
+│   Database   │ │        API          │ │ (OpenAI-compat) │
+│  +pgvector   │ │   Document OCR      │ │                 │
+└──────────────┘ └─────────────────────┘ └─────────────────┘
+                            │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              Alibaba Cloud OSS (Document Storage)               │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│         Qwen API (Vector Embeddings & RAG Retrieval)            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 核心组件 | Key Components
+
+### 1. 后端 (Backend) | Backend
+
+**框架 Framework**: FastAPI with Python 3.11
+**数据库 Database**: PostgreSQL 15 with asyncpg, pgvector extension
+**ORM**: SQLAlchemy 2.0 (async)
+**认证 Authentication**: JWT-based with refresh tokens
+**主文件 Main File**: `app/main.py`
+
+#### 关键文件 | Critical Files:
+- `app/main.py` - 应用入口 / Application entry point
+- `app/models/models.py` - 数据库模型 (18 张表) / Database models (18 tables)
+- `app/api/api_v1/api.py` - API 路由聚合 / API router aggregation
+- `app/core/security.py` - JWT 和密码哈希 / JWT and password hashing
+- `app/services/ai_service.py` - AI 诊断逻辑 / AI diagnosis logic
+- `app/services/mineru_service.py` - 文档处理 / Document processing
+- `app/services/oss_service.py` - 阿里云 OSS 集成 / Alibaba Cloud OSS integration
+- `app/services/vector_embedding_service.py` - 向量嵌入 / Vector embeddings
+- `app/services/smart_rag_selector.py` - 智能 RAG 检索 / Smart RAG retrieval
+
+#### API 结构 | API Structure:
+```
+/api/v1/auth/*              - 认证端点 / Authentication endpoints
+/api/v1/patients/*          - 患者管理 / Patient CRUD
+/api/v1/ai/*               - AI 诊断 / AI diagnosis
+/api/v1/medical-cases/*     - 医疗记录 / Medical records
+/api/v1/documents/*        - 文件上传/处理 / File upload/processing
+/api/v1/admin/*            - 管理员系统 / Admin system
+/api/v1/vector-embedding/*  - 向量管理 / Vector management
+/api/v1/sharing/*          - 数据分享 / Data sharing
+/api/v1/doctor/*           - 医生平台 / Doctor platform
+```
+
+### 2. 前端 (Frontend) | Frontend
+
+**类型 Type**: Static HTML/CSS/JavaScript (Vanilla, no build step)
+**样式 Styling**: Inline CSS with component-based styles
+**三端 Three Platforms**:
+
+#### 患者端 Patient Platform:
+- `index.html` - 首页 / Homepage
+- `login.html` / `register.html` - 认证 / Authentication
+- `symptom-submit.html` - AI 诊断提交 / AI diagnosis submission
+- `medical-records.html` - 诊疗记录 / Diagnosis history
+- `user-profile.html` - 个人中心 / User profile
+
+#### 医生端 Doctor Platform:
+- `doctor-dashboard.html` - 医生仪表板 / Doctor dashboard
+- `doctor-mentions.html` - @我的病例 / @My cases
+- `doctor-case-detail.html` - 病例详情 / Case detail
+- `doctor-profile.html` - 医生档案 / Doctor profile
+
+#### 管理员端 Admin Platform:
+- `admin-dashboard.html` - 管理仪表板 / Admin dashboard
+- `admin-doctors.html` - 医生认证 / Doctor verification
+- `admin-knowledge-base.html` - 知识库管理 / Knowledge base management
+- `admin-ai-models.html` - AI 模型配置 / AI model configuration
+- `admin-logs.html` - 审计日志 / Audit logs
+
+#### 前端模式 | Frontend Patterns:
+- API 调用使用 fetch()，JWT 在 Authorization header 中
+- 令牌存储在 localStorage
+- 提交前进行表单验证
+- 基于 Modal 的确认对话框
+
+- API calls use `fetch()` with JWT in Authorization header
+- Token storage in `localStorage`
+- Form validation before submission
+- Modal-based confirmation dialogs
+
+### 3. 数据库模型 | Database Models
+
+**18 张核心表 | 18 Core Tables:**
+
+1. **users** - 用户账户（统一用户模型，带 role 字段）/ User accounts (unified with role field)
+2. **patients** - 患者档案（传统，已合并到 users）/ Patient profiles (legacy, merged into users)
+3. **diseases** - 疾病定义和指南 / Disease definitions and guidelines
+4. **medical_cases** - 医疗记录/病例 / Medical records/cases
+5. **medical_documents** - 上传的文件（含提取内容和 PII 清洗）/ Uploaded files
+6. **ai_feedbacks** - AI 诊断结果 / AI diagnosis results
+7. **follow_ups** - 计划随访 / Scheduled follow-ups
+8. **user_sessions** - 活跃 JWT 会话 / Active JWT sessions
+9. **audit_logs** - 安全审计追踪 / Security audit trail
+10. **system_resource_logs** - 系统监控指标 / System monitoring metrics
+11. **ai_diagnosis_logs** - AI 请求日志（异常检测）/ AI request logging
+12. **admin_operation_logs** - 管理员审计追踪 / Admin audit trail
+13. **doctor_verifications** - 医生认证工作流 / Doctor verification workflow
+14. **vector_embeddings** - Qwen 向量嵌入（用于 RAG）/ Vector embeddings for RAG
+15. **data_sharing_consents** - 法律同意管理 / Legal consent management
+16. **doctor_patient_relations** - 医患关系 / Doctor-patient relationships
+17. **shared_medical_cases** - 公开/分享病例 / Public/shared cases
+18. **doctor_mentions** - @医生提及 / @doctor mentions in sharing
+19. **doctor_case_comments** - 医生对病例的评论 / Doctor comments on cases
+20. **case_comment_replies** - 患者对医生评论的回复 / Patient replies to doctor comments
+
+### 4. AI 服务 | AI Service
+
+**核心函数 Key Function**: `comprehensive_diagnosis()`
+
+**流程 Flow**:
+1. 收集患者个人信息 / Collect patient personal info
+2. 接受症状 + 可选文件上传 或 预提取文档 / Accept symptoms + optional file upload OR pre-extracted documents
+3. 使用 MinerU 从上传文档提取文本，或使用数据库预提取文档 / Extract text from documents
+4. **智能 RAG 检索**: 查询知识库获取相关指南 / Smart RAG: Query knowledge base
+5. 发送到 AI 模型（OpenAI 兼容 API）/ Send to AI model
+6. 解析 AI 响应 / Parse AI response
+7. 记录 AI 诊断用于监控（指标、延迟、异常）/ Log AI diagnosis
+8. 保存诊断到医疗记录 / Save diagnosis
+9. 返回结构化诊断结果 / Return structured result
+
+**新特性 New Features**:
+- 支持 `document_ids` 参数使用预提取文档 / Supports `document_ids` parameter
+- 使用 PII 清洗后的内容 / Uses PII-cleaned content
+- AI 诊断日志记录和异常检测 / AI diagnosis logging with anomaly detection
+- Token 使用量追踪 / Token usage tracking
+- 请求持续时间监控 / Request duration monitoring
+- **RAG 增强**: 自动检索相关医疗指南 / RAG enhancement: Auto-retrieves relevant guidelines
+
+### 5. 系统监控服务 | System Monitoring Service
+
+**组件 Components**:
+- `SystemMonitoringService`: CPU/内存/磁盘监控，Docker 容器追踪
+- `AIDiagnosisLogger`: AI 请求日志，异常检测，性能指标
+- `AdminOperationLogger`: 管理员操作审计追踪
+
+- `SystemMonitoringService`: CPU/Memory/Disk monitoring, Docker container tracking
+- `AIDiagnosisLogger`: AI request logging, anomaly detection, performance metrics
+- `AdminOperationLogger`: Audit trail for admin actions
+
+**管理员系统特性 Admin System Features**:
+- 实时系统指标仪表板 / Real-time system metrics dashboard
+- AI 诊断统计和异常检测 / AI diagnosis statistics and anomaly detection
+- 医生认证工作流 / Doctor verification workflow
+- 完整审计日志 / Complete audit logging
+
+### 6. 知识库 | Knowledge Base
+
+**结构 Structure**:
+```
+knowledge_bases/
+├── diseases/
+│   └── respiratory/
+│       ├── respiratory.json           # 疾病元数据 / Disease metadata
+│       └── *.md                       # 医疗指南（Markdown）/ Medical guidelines
+├── active/
+│   └── current.json                   # 活跃知识库配置 / Active knowledge base config
+```
+
+**向量化流程 Vectorization Flow**:
+1. 管理员上传医疗指南文档 / Admin uploads medical guidelines
+2. 系统自动分块（Chunking）/ System auto-chunks documents
+3. Qwen API 生成向量嵌入 / Qwen API generates embeddings
+4. 存储在 vector_embeddings 表 / Stored in vector_embeddings table
+5. AI 诊断时 Smart RAG 自动检索相关内容 / Smart RAG retrieves relevant content
+
+### 7. 其他服务 | Other Services
+
+- `oss_service.py`: 阿里云 OSS 文件上传/下载 / Alibaba Cloud OSS file operations
+- `pii_cleaner_service.py`: PII 检测和清洗 / PII detection and cleaning
+- `vector_embedding_service.py`: Qwen API 文档向量化 / Qwen API for document vectorization
+- `kb_vectorization_service.py`: 知识库分块和嵌入 / Knowledge base chunking and embedding
+- `smart_rag_selector.py`: 智能知识库选择和检索 / Intelligent knowledge base selection
+- `data_sharing_service.py`: 患者数据分享（带 @医生提及）/ Patient data sharing with @doctor mentions
+- `data_sharing_consent_service.py`: 法律同意管理 / Legal consent management
+
+---
+
+## 开发工作流 | Development Workflow
+
+### 添加新功能 | Adding a New Feature
+
+1. **数据库变更 Database Changes**:
+   - 更新 `app/models/models.py`
+   - 如需 Alembic 迁移
+   - 更新 `app/schemas/` 中的 Pydantic schemas
+
+2. **后端 API Backend API**:
+   - 在 `app/api/api_v1/endpoints/` 添加端点
+   - 在 `app/api/api_v1/api.py` 注册
+   - 在 `app/services/` 添加服务逻辑
+
+3. **前端 Frontend**:
+   - 在 `/frontend/` 创建/修改 HTML 页面
+   - 添加 API 集成和错误处理
+   - 如需更新导航
+
+4. **测试 Testing**:
+   - 使用 curl 或 Postman 测试 API
+   - 测试前端集成
+   - 验证数据库记录
+
+### 环境设置 | Environment Setup
+
+**必需环境变量 Required Environment Variables**:
+```bash
+# 数据库 Database
+POSTGRES_PASSWORD=          # 数据库密码 / Database password
+REDIS_PASSWORD=             # Redis 密码 / Redis password
+
+# AI 服务 AI Service
+AI_API_KEY=                 # AI 模型 API 密钥 / AI model API key
+AI_API_URL=                 # AI 端点 / AI endpoint
+AI_MODEL_ID=                # 模型标识符 / Model identifier
+
+# 文档处理 Document Processing
+MINERU_TOKEN=               # MinerU API 令牌 / MinerU API token
+
+# 阿里云 OSS Alibaba Cloud OSS
+OSS_ACCESS_KEY_ID=          # 阿里云访问密钥 ID
+OSS_ACCESS_KEY_SECRET=      # 阿里云访问密钥 Secret
+OSS_BUCKET_NAME=            # OSS Bucket 名称
+OSS_ENDPOINT=               # OSS 端点 / OSS endpoint
+
+# 向量数据库 Vector Database
+QWEN_API_KEY=               # Qwen API 密钥 / Qwen API key
+QWEN_API_URL=               # Qwen API 端点 / Qwen API endpoint
+QWEN_EMBEDDING_MODEL=       # 嵌入模型 / Embedding model
+
+# 安全 Security
+JWT_SECRET_KEY=             # 至少 32 字符 / Min 32 characters
+```
+
+### 本地运行 | Running Locally
+
+```bash
+# 启动所有服务 / Start all services
+docker-compose up -d
+
+# 查看日志 / View logs
+docker-compose logs -f backend
+
+# 数据库 Shell / Database shell
+docker-compose exec postgres psql -U medicare_user -d medicare_ai
+
+# 后端 Shell / Backend shell
+docker-compose exec backend bash
+```
+
+---
+
+## 常见任务 | Common Tasks
+
+### 添加新 API 端点 | Adding a New API Endpoint
+
+```python
+@router.post("/new-endpoint")
+async def new_endpoint(
+    data: NewSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 实现 Implementation
+    return result
+```
+
+1. 在 `app/schemas/` 添加 Pydantic schema
+2. 测试：`curl -X POST http://localhost:8000/api/v1/...`
+
+### 修改数据库架构 | Modifying Database Schema
+
+1. 编辑 `app/models/models.py`
+2. 如果使用 Alembic:
+   ```bash
+   docker-compose exec backend alembic revision --autogenerate -m "description"
+   docker-compose exec backend alembic upgrade head
+   ```
+3. 或重启容器（开发环境数据会重置）
+
+### 调试 | Debugging
+
+**后端日志 Backend Logs**:
+```bash
+docker-compose logs -f backend
+```
+
+**数据库查询 Database Query**:
+```bash
+docker-compose exec postgres psql -U medicare_user -d medicare_ai -c "SELECT * FROM users;"
+```
+
+**测试 API Testing API**:
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/api/v1/auth/me -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## 重要注意事项 | Important Notes
+
+### 安全 Security
+- **永远不要提交 .env 文件 / NEVER commit `.env` file**
+- JWT 令牌 30 分钟后过期（可配置）/ JWT tokens expire after 30 minutes
+- 密码使用 bcrypt 哈希 / Passwords hashed with bcrypt
+- CORS 配置在 `app/main.py` / CORS configured in `app/main.py`
+
+### AI 集成 AI Integration
+- AI 模型：支持 OpenAI 兼容 API（如 GLM-4.7-Flash、GPT 等）
+- MinerU 需要有效的 API 令牌
+- 使用 Smart RAG 的知识库确保准确诊断
+- AI 响应使用正则表达式模式解析
+- AI 诊断日志记录和异常检测
+
+### 文件上传和文档处理 File Uploads & Document Processing
+- 最大文件大小：200MB（可配置）
+- 文件存储在容器中的 `/app/uploads/` 或阿里云 OSS
+- 支持：PDF、图片（JPG/PNG）、文档（Word/PPT）
+- MinerU 自动 OCR 提取文本内容
+- AI 处理前自动 PII 清洗保护隐私
+- 预提取文档可在多次 AI 诊断中重复使用
+
+### 数据持久化 Data Persistence
+- PostgreSQL 数据在 Docker 卷 `postgres_data`
+- Redis 数据在 Docker 卷 `redis_data`
+- 上传文件在阿里云 OSS 或 Docker 卷 `uploads_data`
+
+---
+
+## 故障排除 | Troubleshooting
+
+**端口已被占用 Port Already in Use**:
+```bash
+# 检查端口使用情况 / Check port usage
+sudo lsof -i :80
+sudo lsof -i :8000
+# 终止或更改 docker-compose.yml 中的端口
+```
+
+**数据库连接失败 Database Connection Failed**:
+- 检查 postgres 容器是否运行：`docker-compose ps`
+- 验证环境中的 DATABASE_URL
+- 检查日志：`docker-compose logs postgres`
+
+**AI 诊断不工作 AI Diagnosis Not Working**:
+- 验证 AI_API_URL 是否可访问
+- 检查 AI_API_KEY 是否正确
+- 使用 curl 直接测试 AI 端点
+- 检查后端日志获取错误详情
+
+**文档提取问题 Document Extraction Issues**:
+- 验证 MINERU_TOKEN 在 .env 中配置（非占位符）
+- 检查文件格式是否支持
+- 验证文件大小在 200MB 限制内
+- 检查后端日志中的 MinerU API 错误
+
+**带文档的 AI 诊断不工作 AI Diagnosis with Documents Not Working**:
+- 确保文档已上传**并**提取完成（status = "processed"）
+- 使用 `document_ids` 参数代替 `uploaded_files`
+- 检查 PII 清洗状态：`GET /api/v1/documents/{id}/pii-status`
+- 验证文档内容是否正确提取
+
+**管理员端点不可访问 Admin Endpoints Not Accessible**:
+- 用户必须在数据库中有 `role = "admin"`
+- 检查 JWT 令牌是否包含 role 声明
+- 验证管理员端点已注册：`GET /api/docs`
+
+**前端不加载 Frontend Not Loading**:
+- 检查 nginx 是否运行：`docker-compose ps`
+- 验证 nginx.conf 语法
+- 检查 nginx 日志：`docker-compose logs nginx`
+
+---
+
+## 代码风格指南 | Code Style Guidelines
+
+### Python (后端) | Python (Backend)
+- 使用类型提示 / Use type hints
+- 所有数据库操作使用 async/await
+- 遵循 FastAPI 模式
+- Google 风格文档字符串
+
+### JavaScript (前端) | JavaScript (Frontend)
+- API 调用使用 async/await
+- 使用 try/catch 进行错误处理
+- 缩进一致（2 空格）
+
+### SQL
+- 架构变更使用迁移
+- 外键添加索引
+- 使用适当的数据类型
+
+---
+
+## 测试清单 | Testing Checklist
+
+提交更改前：
+- [ ] 代码遵循风格指南
+- [ ] 没有硬编码密钥
+- [ ] 数据库迁移正常工作（如适用）
+- [ ] API 端点已测试
+- [ ] 前端集成已测试
+- [ ] 没有控制台错误
+- [ ] Docker 构建成功
+
+Before submitting changes:
+- [ ] Code follows style guidelines
+- [ ] No hardcoded secrets
+- [ ] Database migrations work (if applicable)
+- [ ] API endpoints tested
+- [ ] Frontend integration tested
+- [ ] No console errors
+- [ ] Docker build succeeds
+
+---
+
+## 资源 Resources
+
+- **FastAPI 文档 Docs**: https://fastapi.tiangolo.com/
+- **SQLAlchemy 文档 Docs**: https://docs.sqlalchemy.org/
+- **Docker 文档 Docs**: https://docs.docker.com/
+- **项目自述 Project README**: `/README.md`
+- **部署指南 Deployment Guide**: `/docs/DEPLOYMENT.md`
+- **架构文档 Architecture**: `/docs/ARCHITECTURE.md`
+- **API 参考 API Reference**: `/docs/API.md`
+- **版本发布 Release Notes**: `/docs/RELEASE_v2.0.0.mdx`

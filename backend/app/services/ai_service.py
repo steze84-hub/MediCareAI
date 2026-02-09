@@ -7,12 +7,15 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import httpx
 
 from app.core.config import settings
 from app.services.knowledge_base_service import get_knowledge_loader
+from app.services.smart_rag_selector import SmartRAGSelector
+from app.services.system_monitoring_service import AIDiagnosisLogger
 
 logger = logging.getLogger(__name__)
 
@@ -132,59 +135,146 @@ class AIService:
             logger.error(f"Streaming API error: {str(e)}")
             yield f"[ERROR] {str(e)}"
 
-    async def query_knowledge_base(self, symptoms: str, disease_category: str = "respiratory") -> Dict[str, Any]:
+    async def query_knowledge_base(self, symptoms: str, disease_category: str = "respiratory", patient_info: Dict = None) -> Dict[str, Any]:
         """
-        Query knowledge base for relevant disease information.
+        Query knowledge base using Smart RAG selector with vector search.
         
         Args:
             symptoms: Symptom description
-            disease_category: Disease category, default respiratory
+            disease_category: Disease category (legacy, now auto-detected)
+            patient_info: Optional patient info for better matching
             
         Returns:
-            Knowledge base information
+            Knowledge base information with RAG sources
         """
         try:
-            loader = get_knowledge_loader()
-            kb_data = loader.load_base(disease_category)
+            from sqlalchemy.ext.asyncio import AsyncSession
+            from app.db.database import AsyncSessionLocal
             
-            diseases = kb_data.get('diseases', [])
-            guidelines = kb_data.get('guidelines', [])
-            
-            knowledge_context = []
-            
-            for disease in diseases[:3]:
-                disease_info = f"""
+            async with AsyncSessionLocal() as db:
+                # Use Smart RAG Selector for intelligent knowledge base selection
+                selector = SmartRAGSelector(db)
+                
+                patient_age = None
+                patient_gender = None
+                if patient_info:
+                    patient_age = patient_info.get('age')
+                    patient_gender = patient_info.get('gender')
+                
+                rag_result = await selector.select_knowledge_bases(
+                    symptoms=symptoms,
+                    patient_age=patient_age,
+                    patient_gender=patient_gender,
+                    top_k=3,
+                    use_vector_search=True
+                )
+                
+                # Build knowledge context from selected sources
+                knowledge_context = []
+                guidelines_context = []
+                sources_used = []
+                
+                for source in rag_result.get('sources', []):
+                    category = source.get('category', '')
+                    sources_used.append(category)
+                    
+                    # Add chunks to context
+                    for chunk in source.get('chunks', []):
+                        chunk_text = chunk.get('text', '')
+                        if chunk_text:
+                            knowledge_context.append(f"""
+【{chunk.get('section_title', category)}】(相似度: {chunk.get('similarity_score', 0):.2f})
+{chunk_text[:500]}
+""")
+                    
+                    # Fallback to legacy loader if no vector chunks
+                    if not source.get('chunks'):
+                        loader = get_knowledge_loader()
+                        kb_data = loader.load_base(category)
+                        
+                        diseases = kb_data.get('diseases', [])
+                        for disease in diseases[:2]:
+                            disease_info = f"""
+疾病名称: {disease.get('name', '未知')}
+症状: {', '.join(disease.get('symptoms', [])[:5])}
+治疗方案: {', '.join(disease.get('treatment', [])[:3])}
+"""
+                            knowledge_context.append(disease_info)
+                
+                # If no RAG sources found, use legacy method
+                if not rag_result.get('sources'):
+                    logger.warning("No RAG sources found, falling back to legacy method")
+                    loader = get_knowledge_loader()
+                    kb_data = loader.load_base(disease_category)
+                    
+                    diseases = kb_data.get('diseases', [])
+                    guidelines = kb_data.get('guidelines', [])
+                    
+                    for disease in diseases[:3]:
+                        disease_info = f"""
 疾病名称: {disease.get('name', '未知')}
 症状: {', '.join(disease.get('symptoms', [])[:5])}
 诊断标准: {', '.join(disease.get('diagnosis_criteria', [])[:3])}
 治疗方案: {', '.join(disease.get('treatment', [])[:3])}
 """
-                knowledge_context.append(disease_info)
-            
-            guideline_context = []
-            for guideline in guidelines[:2]:
-                guide_info = f"""
+                        knowledge_context.append(disease_info)
+                    
+                    for guideline in guidelines[:2]:
+                        guide_info = f"""
 指南: {guideline.get('name', '未知')}
 来源: {guideline.get('source', '未知')}
 关键点: {', '.join(guideline.get('key_points', [])[:3])}
 """
-                guideline_context.append(guide_info)
-            
-            return {
-                "success": True,
-                "diseases_info": "\n".join(knowledge_context),
-                "guidelines_info": "\n".join(guideline_context),
-                "source": disease_category
-            }
-            
+                        guidelines_context.append(guide_info)
+                    
+                    sources_used = [disease_category]
+                
+                return {
+                    "success": True,
+                    "diseases_info": "\n".join(knowledge_context),
+                    "guidelines_info": "\n".join(guidelines_context),
+                    "source": ",".join(sources_used) if sources_used else disease_category,
+                    "rag_info": {
+                        "sources": rag_result.get('sources', []),
+                        "selection_reasoning": rag_result.get('selection_reasoning', ''),
+                        "total_chunks": rag_result.get('total_chunks', 0)
+                    }
+                }
+                
         except Exception as e:
             logger.error(f"Knowledge base query failed: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e),
-                "diseases_info": "",
-                "guidelines_info": ""
-            }
+            # Fallback to legacy method
+            try:
+                loader = get_knowledge_loader()
+                kb_data = loader.load_base(disease_category)
+                
+                diseases = kb_data.get('diseases', [])
+                guidelines = kb_data.get('guidelines', [])
+                
+                knowledge_context = []
+                for disease in diseases[:3]:
+                    disease_info = f"""
+疾病名称: {disease.get('name', '未知')}
+症状: {', '.join(disease.get('symptoms', [])[:5])}
+诊断标准: {', '.join(disease.get('diagnosis_criteria', [])[:3])}
+治疗方案: {', '.join(disease.get('treatment', [])[:3])}
+"""
+                    knowledge_context.append(disease_info)
+                
+                return {
+                    "success": True,
+                    "diseases_info": "\n".join(knowledge_context),
+                    "guidelines_info": "",
+                    "source": disease_category,
+                    "rag_info": {"error": str(e), "fallback": True}
+                }
+            except Exception as fallback_error:
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "diseases_info": "",
+                    "guidelines_info": ""
+                }
 
     async def extract_document_with_mineru(self, file_url: str) -> Dict[str, Any]:
         """
@@ -240,6 +330,19 @@ class AIService:
             logger.error(f"MinerU API error: {str(e)}")
             return {"success": False, "error": str(e)}
 
+    def _get_category_display_name(self, category: str) -> str:
+        """Get display name for knowledge base category / 获取知识库分类显示名称"""
+        category_names = {
+            'respiratory': '呼吸系统疾病',
+            'cardiovascular': '心血管系统疾病',
+            'digestive': '消化系统疾病',
+            'pediatric': '儿科疾病',
+            'dermatology': '皮肤疾病',
+            'neurological': '神经系统疾病',
+            'general': '通用医学知识'
+        }
+        return category_names.get(category, category)
+
     async def comprehensive_diagnosis(
         self,
         symptoms: str,
@@ -248,35 +351,87 @@ class AIService:
         severity: Optional[str] = None,
         uploaded_files: Optional[List[str]] = None,
         disease_category: str = "respiratory",
-        language: str = "zh"
+        language: str = "zh",
+        extracted_documents: Optional[List[Dict[str, Any]]] = None,
+        user_id: Optional[str] = None,
+        db: Optional[Any] = None
     ) -> Dict[str, Any]:
         """
         Complete diagnosis workflow.
         
-        Integrates: personal info + medical submission info + knowledge base -> AI diagnosis
+        Integrates: personal info + medical submission + knowledge base -> AI diagnosis
         
         Args:
             language: Language preference - "zh" for Chinese, "en" for English
+            extracted_documents: Pre-extracted documents with MinerU (from database)
         """
+        import uuid
+        
+        # Track request timing for logging
+        start_time = time.time()
+        request_type = "comprehensive_diagnosis"
+        status = "success"
+        error_message = None
+        tokens_input = 0
+        tokens_output = 0
+        
         logger.info(f"Starting comprehensive diagnosis workflow (language: {language})...")
         
         # Process uploaded files with MinerU
         extracted_texts = []
-        if uploaded_files:
-            logger.info(f"Extracting {len(uploaded_files)} files...")
+        extraction_details = []  # Store detailed extraction info for display
+        
+        # Use pre-extracted documents from database if provided
+        if extracted_documents:
+            logger.info(f"Using {len(extracted_documents)} pre-extracted documents from database...")
+            for doc in extracted_documents:
+                # Get original extracted content
+                extracted_content = doc.get('extracted_content', {})
+                if isinstance(extracted_content, dict):
+                    text_content = extracted_content.get('text', '')
+                else:
+                    text_content = str(extracted_content)
+                
+                # Get cleaned content (PII cleaned) if available
+                cleaned_content = doc.get('cleaned_content', {})
+                if isinstance(cleaned_content, dict):
+                    cleaned_text = cleaned_content.get('text', text_content)
+                else:
+                    cleaned_text = str(cleaned_content) if cleaned_content else text_content
+                
+                if text_content:
+                    extracted_texts.append(cleaned_text[:2000])
+                    extraction_details.append({
+                        "filename": doc.get('original_filename', 'Unknown'),
+                        "original_length": len(text_content),
+                        "cleaned_length": len(cleaned_text),
+                        "pii_status": doc.get('pii_cleaning_status', 'unknown'),
+                        "pii_detected_count": len(doc.get('pii_detected', []))
+                    })
+                    logger.info(f"Document processed: {doc.get('original_filename')}, "
+                              f"PII status: {doc.get('pii_cleaning_status')}")
+        
+        # Process uploaded files with MinerU (legacy support)
+        elif uploaded_files:
+            logger.info(f"Extracting {len(uploaded_files)} files with MinerU...")
             for file_url in uploaded_files:
                 extraction_result = await self.extract_document_with_mineru(file_url)
                 if extraction_result.get('success'):
                     text_content = extraction_result.get('text_content', '')
                     if text_content:
                         extracted_texts.append(text_content[:2000])
+                        extraction_details.append({
+                            "filename": file_url,
+                            "original_length": len(text_content),
+                            "source": "live_extraction"
+                        })
                         logger.info(f"File extraction successful, content length: {len(text_content)}")
                 else:
                     logger.warning(f"File extraction failed: {extraction_result.get('error')}")
         
         # Query knowledge base
         logger.info(f"Querying knowledge base: {disease_category}...")
-        kb_result = await self.query_knowledge_base(symptoms, disease_category)
+        kb_result = await self.query_knowledge_base(symptoms, disease_category, patient_info)
         
         # Build complete prompt
         prompt = self._build_diagnosis_prompt(
@@ -303,26 +458,121 @@ class AIService:
             {"role": "user", "content": prompt}
         ]
         
+        # Calculate approximate input tokens (rough estimate: 4 chars per token for Chinese)
+        prompt_length = len(prompt)
+        tokens_input = prompt_length // 4 if language == "zh" else prompt_length // 5
+        
         result = await self.chat_with_glm(messages)
         
+        # Calculate duration
+        duration_ms = int((time.time() - start_time) * 1000)
+        
         if result.get('success'):
+            # Get token usage from response
+            usage = result.get('usage', {})
+            tokens_input = usage.get('prompt_tokens', tokens_input)
+            tokens_output = usage.get('completion_tokens', len(result.get('content', '')) // 4 if language == "zh" else len(result.get('content', '')) // 5)
+            status = "success"
+            
+            # Log AI diagnosis if user_id and db are provided
+            if user_id and db:
+                try:
+                    ai_logger = AIDiagnosisLogger(db)
+                    await ai_logger.log_diagnosis(
+                        user_id=uuid.UUID(user_id),
+                        request_type=request_type,
+                        ai_model_id=settings.ai_model_id,
+                        ai_api_url=settings.ai_api_url,
+                        duration_ms=duration_ms,
+                        tokens_input=tokens_input,
+                        tokens_output=tokens_output,
+                        status=status,
+                        error_message=""
+                    )
+                except Exception as log_error:
+                    logger.warning(f"Failed to log AI diagnosis: {log_error}")
+            
+            # Build knowledge base sources for response
+            knowledge_base_sources = []
+            if kb_result.get('success') and kb_result.get('rag_info', {}).get('sources'):
+                for source in kb_result['rag_info']['sources']:
+                    category = source.get('category', '')
+                    chunks_data = []
+                    for chunk in source.get('chunks', []):
+                        chunks_data.append({
+                            "chunk_id": chunk.get('chunk_id'),
+                            "section_title": chunk.get('section_title', category),
+                            "text_preview": chunk.get('text', '')[:200] + "..." if len(chunk.get('text', '')) > 200 else chunk.get('text', ''),
+                            "similarity_score": chunk.get('similarity_score', 0),
+                            "source_file": chunk.get('source_file')
+                        })
+                    
+                    knowledge_base_sources.append({
+                        "category": category,
+                        "category_name": self._get_category_display_name(category),
+                        "relevance_score": source.get('relevance_score', 0),
+                        "selection_reason": source.get('selection_reason', ''),
+                        "chunks_count": len(source.get('chunks', [])),
+                        "chunks": chunks_data
+                    })
+            
             return {
                 "success": True,
                 "diagnosis": result['content'],
                 "model_used": settings.ai_model_id,
                 "tokens_used": result.get('usage', {}).get('total_tokens', 0),
+                "request_duration_ms": duration_ms,
                 "workflow": {
                     "patient_info_included": bool(patient_info),
                     "files_processed": len(extracted_texts),
+                    "documents_detail": extraction_details,  # 详细的文档处理信息
                     "knowledge_base_queried": kb_result.get('success', False),
-                    "knowledge_source": kb_result.get('source', '')
-                }
+                    "knowledge_source": kb_result.get('source', ''),
+                    "knowledge_base_sources_count": len(knowledge_base_sources)
+                },
+                # 知识库溯源信息（新增）
+                "knowledge_base_sources": knowledge_base_sources,
+                "knowledge_base_selection_reasoning": kb_result.get('rag_info', {}).get('selection_reasoning', ''),
+                # 显示MinerU提取的内容给患者（新增）
+                "extracted_documents": {
+                    "count": len(extraction_details),
+                    "documents": extraction_details,
+                    "extracted_texts_preview": [text[:200] + "..." if len(text) > 200 else text 
+                                               for text in extracted_texts] if extracted_texts else []
+                } if extraction_details else None
             }
         else:
+            # Failed request
+            status = "error"
+            error_message = result.get('error', 'Unknown error')
+            
+            # Log failed AI diagnosis
+            if user_id and db:
+                try:
+                    ai_logger = AIDiagnosisLogger(db)
+                    await ai_logger.log_diagnosis(
+                        user_id=uuid.UUID(user_id),
+                        request_type=request_type,
+                        ai_model_id=settings.ai_model_id,
+                        ai_api_url=settings.ai_api_url,
+                        duration_ms=duration_ms,
+                        tokens_input=tokens_input,
+                        tokens_output=0,
+                        status=status,
+                        error_message=error_message
+                    )
+                except Exception as log_error:
+                    logger.warning(f"Failed to log AI diagnosis error: {log_error}")
+            
             return {
                 "success": False,
-                "error": result.get('error'),
-                "diagnosis": "AI analysis failed, please try again later"
+                "error": error_message,
+                "diagnosis": "AI analysis failed, please try again later",
+                "request_duration_ms": duration_ms,
+                "extracted_documents": {
+                    "count": len(extraction_details),
+                    "documents": extraction_details
+                } if extraction_details else None
             }
 
     async def comprehensive_diagnosis_stream(
@@ -332,20 +582,21 @@ class AIService:
         duration: Optional[str] = None,
         severity: Optional[str] = None,
         uploaded_files: Optional[List[str]] = None,
+        extracted_documents: Optional[List[Dict[str, Any]]] = None,
         disease_category: str = "respiratory",
         language: str = "zh"
     ) -> AsyncGenerator[str, None]:
         """
         Complete diagnosis workflow (streaming).
-        
+
         Integrates: personal info + medical submission info + knowledge base -> AI diagnosis (streaming)
-        
+
         Args:
             language: Language preference - "zh" for Chinese, "en" for English
         """
         logger.info(f"Starting comprehensive diagnosis workflow (streaming, language: {language})...")
-        
-        # Process uploaded files with MinerU
+
+        # Process uploaded files with MinerU (legacy support)
         extracted_texts = []
         if uploaded_files:
             logger.info(f"Extracting {len(uploaded_files)} files...")
@@ -358,10 +609,32 @@ class AIService:
                         logger.info(f"File extraction successful, content length: {len(text_content)}")
                 else:
                     logger.warning(f"File extraction failed: {extraction_result.get('error')}")
+
+        # Add pre-extracted documents from database
+        if extracted_documents:
+            logger.info(f"Adding {len(extracted_documents)} pre-extracted documents...")
+            for doc in extracted_documents:
+                # Get content from cleaned_content (dict with 'text' field) or extracted_content
+                content = ''
+                cleaned = doc.get('cleaned_content')
+                if cleaned and isinstance(cleaned, dict):
+                    content = cleaned.get('text', '')
+                elif cleaned:
+                    content = str(cleaned)
+                else:
+                    extracted = doc.get('extracted_content', '')
+                    if isinstance(extracted, dict):
+                        content = str(extracted)
+                    else:
+                        content = extracted
+                
+                if content:
+                    extracted_texts.append(f"[{doc.get('original_filename', 'Document')}]:\n{content[:2000]}")
+                    logger.info(f"Added document content: {doc.get('original_filename', 'Document')}, length: {len(content)}")
         
         # Query knowledge base
         logger.info(f"Querying knowledge base: {disease_category}...")
-        kb_result = await self.query_knowledge_base(symptoms, disease_category)
+        kb_result = await self.query_knowledge_base(symptoms, disease_category, patient_info)
         
         # Build complete prompt
         prompt = self._build_diagnosis_prompt(
@@ -380,9 +653,15 @@ class AIService:
         if language == "zh":
             system_prompt = """你是一位经验丰富的全科医生。请根据患者信息、症状描述、相关检查数据和医疗知识库提供专业的中文诊断。
 
+特别重要：如果患者上传了检查报告（如血常规、病原体检测等），你必须：
+1) 仔细分析报告中的每一项指标
+2) 明确指出哪些指标异常（超出参考范围）
+3) 解释每个异常指标可能的临床意义
+4) 结合异常指标和症状给出综合诊断
+
 请确保你的回答完整，包括：
 1) 初步诊断（按可能性排序的表格）
-2) 详细分析
+2) 详细分析（必须包含检查报告异常指标分析）
 3) 建议检查项目
 4) 治疗方案
 5) 注意事项
@@ -391,9 +670,15 @@ class AIService:
         else:
             system_prompt = """You are a professional general practitioner with rich clinical experience. Please provide professional diagnosis in English based on the patient information, symptom description, relevant examination data and medical knowledge base.
 
+Important: If the patient has uploaded examination reports (such as blood tests, pathogen tests, etc.), you MUST:
+1) Carefully analyze each indicator in the report
+2) Clearly identify which indicators are abnormal (outside reference ranges)
+3) Explain the possible clinical significance of each abnormal indicator
+4) Provide comprehensive diagnosis combining abnormal indicators with symptoms
+
 Please ensure your answer is complete, including:
 1) Preliminary diagnosis (table sorted by probability)
-2) Detailed analysis
+2) Detailed analysis (must include analysis of abnormal indicators from examination reports)
 3) Recommended examinations
 4) Treatment plan
 5) Precautions
@@ -468,10 +753,18 @@ Please answer in English."""
             
             # Add MinerU extracted file content
             if extracted_texts:
-                prompt_parts.append("\n--- 上传的检查报告/材料 (通过MinerU提取) ---")
+                prompt_parts.append("\n" + "=" * 50)
+                prompt_parts.append("【上传的检查报告/材料 - 非常重要】")
+                prompt_parts.append("=" * 50)
+                prompt_parts.append("以下是通过OCR从患者上传的检查报告中提取的内容。")
+                prompt_parts.append("你必须仔细分析其中的每一项指标，特别关注：")
+                prompt_parts.append("- 哪些指标超出了参考范围（异常）")
+                prompt_parts.append("- 异常指标可能代表什么健康问题")
+                prompt_parts.append("- 如何结合这些异常指标和症状进行诊断")
+                prompt_parts.append("")
                 for i, text in enumerate(extracted_texts, 1):
-                    prompt_parts.append(f"\n[文件 {i} 内容]:")
-                    prompt_parts.append(text[:1500])
+                    prompt_parts.append(f"\n[检查报告 {i} 内容]:")
+                    prompt_parts.append(text[:2000])  # 增加字符数以获取更多信息
             
             # Part 3: Knowledge Base Information
             prompt_parts.append("\n" + "=" * 50)
@@ -491,20 +784,42 @@ Please answer in English."""
             
             # Diagnosis Requirements
             prompt_parts.append("\n" + "=" * 50)
-            prompt_parts.append("【诊断要求】")
+            prompt_parts.append("【诊断要求 - 请严格遵循】")
             prompt_parts.append("=" * 50)
             prompt_parts.append("""
 请根据以上三部分内容提供以下中文诊断内容：
 
 1. **初步诊断**：根据症状和检查数据提供可能的诊断（按可能性排序）
-2. **诊断依据**：结合知识库解释诊断推理
-3. **鉴别诊断**：列出需要排除的其他疾病
-4. **建议检查**：列出推荐的进一步检查
-5. **治疗方案**：基于知识库的治疗建议
-6. **注意事项**：用药提醒、生活建议等
-7. **就医建议**：是否需要立即就医，建议就诊科室
 
-请注意：
+2. **检查报告分析**（如果有上传检查报告，这是必选项）：
+   - 列出报告中所有异常指标（超出参考范围的数值）
+   - 对每个异常指标，解释其临床意义
+   - 分析异常指标与患者症状之间的关联
+   - 例如："白细胞计数13.04（参考范围4.0-12.0）偏高，提示可能存在感染或炎症"
+
+3. **诊断依据**：结合知识库和检查报告异常指标解释诊断推理
+
+4. **鉴别诊断**：列出需要排除的其他疾病
+
+5. **建议检查**：列出推荐的进一步检查
+
+6. **治疗方案**：基于知识库的治疗建议
+
+7. **注意事项**：用药提醒、生活建议等
+
+8. **就医建议**：是否需要立即就医，建议就诊科室
+
+**【重要 - 知识库引用标注要求】**
+在诊断报告的相关部分，当你引用了上述【第3部分：医疗知识库参考】中的内容时，请使用以下格式标注：
+- 在引用内容后添加标注：[知识库: {章节标题}]
+- 例如："根据临床表现，儿童哮喘诊断需要考虑反复发作性喘息[知识库: 儿童哮喘诊断标准]"
+- 如果是综合多个知识库内容，可以标注：[知识库: 综合多个来源]
+
+这样做是为了让患者知道哪些诊断依据来自权威医学知识库，增强诊断的可信度。
+
+重要提醒：
+- 如果患者上传了检查报告，你必须在诊断中明确提及异常指标及其意义
+- **请务必在诊断中标注引用的知识库来源，这很重要**
 - 诊断仅供参考，不能替代专业医生的诊疗
 - 如有紧急情况，请立即就医
 - 根据患者个人信息（如过敏史等）提供个性化建议
@@ -541,10 +856,18 @@ Please answer in English."""
             
             # Add MinerU extracted file content
             if extracted_texts:
-                prompt_parts.append("\n--- Uploaded examination reports/materials (extracted by MinerU) ---")
+                prompt_parts.append("\n" + "=" * 50)
+                prompt_parts.append("【Uploaded Examination Reports/Materials - Very Important】")
+                prompt_parts.append("=" * 50)
+                prompt_parts.append("The following content is extracted from examination reports uploaded by the patient using OCR.")
+                prompt_parts.append("You must carefully analyze each indicator in the report, with special attention to:")
+                prompt_parts.append("- Which indicators are outside the reference range (abnormal)")
+                prompt_parts.append("- What health issues abnormal indicators may represent")
+                prompt_parts.append("- How to combine these abnormal indicators with symptoms for diagnosis")
+                prompt_parts.append("")
                 for i, text in enumerate(extracted_texts, 1):
-                    prompt_parts.append(f"\n[File {i} content]:")
-                    prompt_parts.append(text[:1500])
+                    prompt_parts.append(f"\n[Examination Report {i} content]:")
+                    prompt_parts.append(text[:2000])  # Increased character limit
             
             # Part 3: Knowledge Base Information
             prompt_parts.append("\n" + "=" * 50)
@@ -564,20 +887,42 @@ Please answer in English."""
             
             # Diagnosis Requirements
             prompt_parts.append("\n" + "=" * 50)
-            prompt_parts.append("【Diagnosis Requirements】")
+            prompt_parts.append("【Diagnosis Requirements - Please Follow Strictly】")
             prompt_parts.append("=" * 50)
             prompt_parts.append("""
 Please provide the following diagnosis content based on the three parts above:
 
 1. **Preliminary Diagnosis**: Possible diagnoses based on symptoms and examination data (sorted by probability)
-2. **Diagnosis Basis**: Explain diagnosis reasoning combined with knowledge base
-3. **Differential Diagnosis**: List other diseases to exclude
-4. **Recommended Examinations**: List further examinations to recommend
-5. **Treatment Plan**: Treatment recommendations based on knowledge base
-6. **Precautions**: Medication reminders, lifestyle suggestions, etc.
-7. **Medical Advice**: Whether immediate medical attention is needed, recommended departments
 
-Please note:
+2. **Examination Report Analysis** (If examination reports were uploaded, this is REQUIRED):
+   - List all abnormal indicators in the report (values outside reference range)
+   - Explain the clinical significance of each abnormal indicator
+   - Analyze the correlation between abnormal indicators and patient symptoms
+   - Example: "White blood cell count 13.04 (reference range 4.0-12.0) is elevated, suggesting possible infection or inflammation"
+
+3. **Diagnosis Basis**: Explain diagnosis reasoning combining knowledge base and abnormal indicators from examination reports
+
+4. **Differential Diagnosis**: List other diseases to exclude
+
+5. **Recommended Examinations**: List further examinations to recommend
+
+6. **Treatment Plan**: Treatment recommendations based on knowledge base
+
+7. **Precautions**: Medication reminders, lifestyle suggestions, etc.
+
+8. **Medical Advice**: Whether immediate medical attention is needed, recommended departments
+
+**[IMPORTANT - Knowledge Base Citation Requirements]**
+When you reference content from the [Part 3: Medical Knowledge Base Reference] above in your diagnosis report, please use the following format to cite the source:
+- Add citation after the referenced content: [Knowledge Base: {Section Title}]
+- Example: "According to clinical manifestations, childhood asthma diagnosis needs to consider recurrent wheezing [Knowledge Base: Childhood Asthma Diagnostic Criteria]"
+- If synthesizing multiple knowledge base sources, you can use: [Knowledge Base: Multiple Sources]
+
+This helps patients understand which diagnostic basis comes from authoritative medical knowledge bases, enhancing the credibility of the diagnosis.
+
+Important Reminders:
+- If the patient uploaded examination reports, you MUST mention abnormal indicators and their significance in the diagnosis
+- **Please be sure to cite knowledge base sources in your diagnosis, this is very important**
 - Diagnosis is for reference only and cannot replace professional doctor's consultation
 - In case of emergency, seek medical attention immediately
 - Provide personalized suggestions based on patient personal information (such as allergy history)

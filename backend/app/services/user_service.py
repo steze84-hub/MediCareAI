@@ -77,7 +77,7 @@ class UserService:
                 detail="创建用户失败"
             )
 
-    async def authenticate_user(self, email: str, password: str) -> tuple[User, dict]:
+    async def authenticate_user(self, email: str, password: str, platform: str = "patient") -> tuple[User, dict]:
         """用户认证"""
         try:
             user = await self.get_user_by_email(email)
@@ -103,8 +103,17 @@ class UserService:
             user.last_login = datetime.utcnow()
             await self.db.commit()
 
-            # 创建令牌
-            tokens = create_token_for_user(user.id, user.email)
+            # 创建令牌（包含角色和平台信息）
+            # Validate platform access using the validation function
+            # 使用验证函数验证平台访问权限
+            if not self.validate_platform_access(user.role, platform):
+                available_platforms = self.get_available_platforms(user.role)
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"作为 {user.role} 用户，您无法访问 {platform} 平台。可用平台: {', '.join(available_platforms)}"
+                )
+            
+            tokens = create_token_for_user(user.id, user.email, user.role, platform)
 
             # 清理该用户的旧会话
             try:
@@ -212,3 +221,40 @@ class UserService:
             logger.error(f"用户登出失败: {e}")
             await self.db.rollback()
             return False
+
+    def validate_platform_access(self, user_role: str, target_platform: str) -> bool:
+        """
+        验证用户是否有权限访问目标平台
+        Validate user has permission to access target platform
+        
+        Platform permission rules:
+        Platform permission rules:
+        - patient role: 只能访问patient平台
+        - doctor role: 可以访问doctor和patient平台
+        - admin role: 可以访问patient、doctor、admin三个平台
+        """
+        if target_platform not in ["patient", "doctor", "admin"]:
+            return False
+        
+        if user_role == "patient":
+            return target_platform == "patient"
+        elif user_role == "doctor":
+            return target_platform in ["doctor", "patient"]
+        elif user_role == "admin":
+            return target_platform in ["patient", "doctor", "admin"]
+        else:
+            return False
+
+    def get_available_platforms(self, user_role: str) -> list[str]:
+        """
+        根据用户角色获取可用平台列表
+        Get available platforms based on user role
+        """
+        if user_role == "admin":
+            return ["patient", "doctor", "admin"]
+        elif user_role == "doctor":
+            return ["patient", "doctor"]
+        elif user_role == "patient":
+            return ["patient"]
+        else:
+            return []

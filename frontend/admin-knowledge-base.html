@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+    <title>MediCare AI - 知识库管理</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fa; min-height: 100vh; }
+        .navbar { background: white; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); padding: 0 30px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: bold; color: #fc4a1a; }
+        .nav-menu { display: flex; gap: 30px; }
+        .nav-menu a { text-decoration: none; color: #666; font-weight: 500; padding: 5px 10px; border-radius: 5px; transition: all 0.3s; }
+        .nav-menu a:hover, .nav-menu a.active { color: #fc4a1a; background: rgba(252, 74, 26, 0.1); }
+        .nav-user button { background: #f5f5f5; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .main-content { margin-top: 60px; padding: 30px; max-width: 1400px; margin-left: auto; margin-right: auto; }
+        .page-header { background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+        .page-header h1 { font-size: 24px; margin-bottom: 10px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 20px; }
+        .card h3 { color: #333; margin-bottom: 20px; font-size: 18px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        
+        /* 上传区域 */
+        .upload-area { border: 2px dashed #ddd; border-radius: 8px; padding: 40px; text-align: center; margin-bottom: 20px; cursor: pointer; transition: all 0.3s; }
+        .upload-area:hover { border-color: #fc4a1a; background: rgba(252, 74, 26, 0.05); }
+        .upload-area.dragover { border-color: #fc4a1a; background: rgba(252, 74, 26, 0.1); }
+        .upload-icon { font-size: 48px; margin-bottom: 10px; }
+        .upload-text { color: #666; font-size: 14px; }
+        .upload-input { display: none; }
+        
+        /* 文档列表 */
+        .doc-item { padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .doc-info h4 { color: #333; margin-bottom: 5px; font-size: 15px; }
+        .doc-info p { color: #666; font-size: 13px; margin: 3px 0; }
+        .doc-preview { color: #999; font-size: 12px; margin-top: 8px; max-width: 600px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .doc-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-processing { background: #fff3cd; color: #856404; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        .doc-actions { display: flex; gap: 10px; }
+        
+        /* 按钮 */
+        .btn { background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 13px; }
+        .btn:hover { opacity: 0.9; }
+        .btn-danger { background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        /* 进度条 */
+        .progress-bar { width: 100%; height: 4px; background: #f0f0f0; border-radius: 2px; margin-top: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); width: 0%; transition: width 0.3s; }
+        
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #fc4a1a; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .alert { padding: 12px 15px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span style="font-size: 28px;">⚙️</span>
+            <span>MediCare AI 管理员控制台</span>
+        </div>
+        <div class="nav-menu">
+            <a href="/admin-dashboard.html">系统概览</a>
+            <a href="/admin-ai-models.html">AI模型配置</a>
+            <a href="/admin-knowledge-base.html" class="active">知识库管理</a>
+            <a href="/admin-doctors.html">医生认证</a>
+            <a href="/admin-logs.html">系统日志</a>
+        </div>
+        <div class="nav-user">
+            <button onclick="logout()">退出</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="page-header">
+            <h1>📚 知识库管理</h1>
+            <p>上传诊疗指南文档，系统自动进行向量化为AI诊断提供知识支持</p>
+        </div>
+
+        <!-- 上传区域 -->
+        <div class="card">
+            <h3>上传文档</h3>
+            <div id="alertContainer"></div>
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">
+                    <strong>点击或拖拽上传 .md 文件</strong><br>
+                    <span style="color: #999; font-size: 12px;">支持 Markdown 格式的诊疗指南文档，最大 50MB</span>
+                </div>
+                <input type="file" id="fileInput" class="upload-input" accept=".md" onchange="handleFileSelect(event)">
+            </div>
+            <div id="uploadProgress" style="display: none;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span id="uploadFilename">上传中...</span>
+                    <span id="uploadPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文档列表 -->
+        <div class="card">
+            <h3>知识库文档</h3>
+            <div id="docsList">
+                <div class="loading"><span class="spinner"></span> 加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/admin-login.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/admin-login.html';
+        }
+
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000);
+        }
+
+        // 文件上传
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!file.name.endsWith('.md')) {
+                showAlert('请选择 .md 格式的 Markdown 文件', 'error');
+                return;
+            }
+            
+            await uploadFile(file);
+        }
+
+        async function uploadFile(file) {
+            const progressDiv = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const uploadPercent = document.getElementById('uploadPercent');
+            const uploadFilename = document.getElementById('uploadFilename');
+            
+            progressDiv.style.display = 'block';
+            uploadFilename.textContent = file.name;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percent + '%';
+                        uploadPercent.textContent = percent + '%';
+                    }
+                };
+                
+                xhr.onload = () => {
+                    if (xhr.status === 200) {
+                        showAlert('文档上传成功！系统正在后台进行向量化处理...', 'success');
+                        loadDocuments();
+                        setTimeout(() => {
+                            progressDiv.style.display = 'none';
+                            progressBar.style.width = '0%';
+                            document.getElementById('fileInput').value = '';
+                        }, 2000);
+                    } else {
+                        const error = JSON.parse(xhr.responseText);
+                        showAlert(error.detail || '上传失败', 'error');
+                        progressDiv.style.display = 'none';
+                    }
+                };
+                
+                xhr.onerror = () => {
+                    showAlert('上传失败，请检查网络连接', 'error');
+                    progressDiv.style.display = 'none';
+                };
+                
+                xhr.open('POST', `${API_BASE}/api/v1/admin/knowledge-base/upload`);
+                xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('access_token')}`);
+                xhr.send(formData);
+                
+            } catch (error) {
+                showAlert('上传失败: ' + error.message, 'error');
+                progressDiv.style.display = 'none';
+            }
+        }
+
+        // 拖拽上传
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                handleFileSelect({ target: { files: files } });
+            }
+        });
+
+        async function loadDocuments() {
+            const container = document.getElementById('docsList');
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/knowledge-base/documents`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    renderDocuments(data.documents || []);
+                } else {
+                    throw new Error('加载失败');
+                }
+            } catch (error) {
+                container.innerHTML = `<p style="color: #999; text-align: center;">加载失败: ${error.message}</p>`;
+            }
+        }
+
+        function renderDocuments(docs) {
+            const container = document.getElementById('docsList');
+            if (!docs || docs.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">暂无文档，请上传诊疗指南</p>';
+                return;
+            }
+            
+            const statusLabels = {
+                'completed': '已完成',
+                'processing': '处理中',
+                'failed': '失败'
+            };
+            
+            container.innerHTML = docs.map(doc => `
+                <div class="doc-item">
+                    <div style="flex: 1;">
+                        <div class="doc-info">
+                            <h4>${doc.filename || '未命名文档'}</h4>
+                            <p>
+                                <span>📦 ${(doc.file_size / 1024).toFixed(1)} KB</span> | 
+                                <span>📅 ${new Date(doc.uploaded_at).toLocaleDateString('zh-CN')}</span> | 
+                                <span>🧩 ${doc.chunk_count || 0} 个向量块</span>
+                            </p>
+                            ${doc.preview ? `<div class="doc-preview">${doc.preview}</div>` : ''}
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span class="doc-status status-${doc.status || 'processing'}">${statusLabels[doc.status] || '处理中'}</span>
+                        <div class="doc-actions">
+                            <button class="btn btn-danger" onclick="deleteDocument('${doc.doc_id}')">删除</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function deleteDocument(docId) {
+            if (!confirm('确定要删除该文档吗？这将同时删除其向量数据。')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/knowledge-base/documents/${docId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                
+                if (response.ok) {
+                    showAlert('文档已删除', 'success');
+                    loadDocuments();
+                } else {
+                    const error = await response.json();
+                    showAlert(error.detail || '删除失败', 'error');
+                }
+            } catch (error) {
+                showAlert('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) return;
+            loadDocuments();
+            // 每30秒刷新一次状态
+            setInterval(loadDocuments, 30000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍⚕️</text></svg>">
+    <title>MediCare AI - @我的病例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 0 30px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #11998e;
+        }
+
+        .nav-brand .logo {
+            font-size: 28px;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: #666;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            color: #11998e;
+            background: rgba(17, 153, 142, 0.1);
+        }
+
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .nav-user button {
+            background: #f5f5f5;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .nav-user button:hover {
+            background: #e0e0e0;
+        }
+
+        .main-content {
+            margin-top: 60px;
+            padding: 30px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .page-header {
+            background: white;
+            padding: 24px 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+        }
+
+        .page-header h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+
+        .cases-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .case-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .case-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .case-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .case-id {
+            font-size: 14px;
+            color: #11998e;
+            font-weight: 600;
+            background: rgba(17, 153, 142, 0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+
+        .case-date {
+            font-size: 13px;
+            color: #999;
+        }
+
+        .case-info {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .case-info span {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .case-category {
+            background: rgba(17, 153, 142, 0.1);
+            color: #11998e;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .case-content {
+            color: #555;
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+
+        .case-content h4 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .case-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 16px;
+            border-top: 1px solid #eee;
+        }
+
+        .case-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #888;
+        }
+
+        .case-action {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .case-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .empty-state .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #11998e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .mention-badge {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .filter-section {
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .filter-section label {
+            font-weight: 500;
+            color: #333;
+            font-size: 15px;
+        }
+
+        .filter-section select {
+            padding: 10px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #333;
+            background: white;
+            cursor: pointer;
+            min-width: 140px;
+            transition: all 0.3s;
+        }
+
+        .filter-section select:hover {
+            border-color: #11998e;
+        }
+
+        .filter-section select:focus {
+            outline: none;
+            border-color: #11998e;
+            box-shadow: 0 0 0 3px rgba(17, 153, 142, 0.1);
+        }
+
+        .filter-result-count {
+            margin-left: auto;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">👨‍⚕️</span>
+            <span>MediCare AI 医生平台</span>
+        </div>
+        <div class="nav-menu">
+            <a href="/doctor-dashboard.html">工作台</a>
+            <a href="/doctor-cases.html">病例浏览</a>
+            <a href="/doctor-mentions.html" class="active">@我的</a>
+            <a href="/doctor-export.html">科研导出</a>
+        </div>
+        <div class="nav-user">
+            <span id="doctorName"></span>
+            <button onclick="logout()">退出</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="page-header">
+            <h1>📢 @我的病例</h1>
+            <p>查看患者@提及您的病例，这些病例需要您的专业建议</p>
+        </div>
+
+        <div class="alert alert-info">
+            💡 提示：当患者在分享病例时使用@功能提到您，相关病例会显示在这里。
+        </div>
+
+        <div class="filter-section">
+            <label for="timeFilter">⏰ 时间筛选：</label>
+            <select id="timeFilter" onchange="filterCases()">
+                <option value="all">全部时间</option>
+                <option value="today">今日</option>
+                <option value="3days">三天内</option>
+                <option value="week">一周内</option>
+            </select>
+        </div>
+
+        <div id="casesList" class="cases-list">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 15px; color: #666;">加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let allCases = []; // Store all loaded cases for filtering
+
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/doctor-login.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/doctor-login.html';
+        }
+
+        async function loadDoctorInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('doctorName').textContent = data.full_name || data.display_name || '医生';
+                }
+            } catch (error) {
+                console.error('加载医生信息失败:', error);
+            }
+        }
+
+        async function loadMentionedCases() {
+            const container = document.getElementById('casesList');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/doctor/cases?type=mentioned&limit=50`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
+                    throw new Error('加载失败');
+                }
+
+                const data = await response.json();
+                allCases = data || []; // Store all cases for filtering
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">📭</div>
+                            <h3>暂无@我的病例</h3>
+                            <p>当患者在分享病例时@提及您，相关病例会显示在这里</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                filterCases(); // Apply current filter
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">⚠️</div>
+                        <h3>加载失败</h3>
+                        <p>请稍后重试</p>
+                    </div>
+                `;
+            }
+        }
+
+        function filterCases() {
+            const filterValue = document.getElementById('timeFilter').value;
+            
+            if (allCases.length === 0) {
+                return;
+            }
+            
+            let filteredCases = allCases;
+            const now = new Date();
+            
+            switch (filterValue) {
+                case 'today':
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    filteredCases = allCases.filter(caseItem => {
+                        const caseDate = new Date(caseItem.created_at);
+                        return caseDate >= today;
+                    });
+                    break;
+                    
+                case '3days':
+                    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+                    filteredCases = allCases.filter(caseItem => {
+                        const caseDate = new Date(caseItem.created_at);
+                        return caseDate >= threeDaysAgo;
+                    });
+                    break;
+                    
+                case 'week':
+                    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    filteredCases = allCases.filter(caseItem => {
+                        const caseDate = new Date(caseItem.created_at);
+                        return caseDate >= oneWeekAgo;
+                    });
+                    break;
+                    
+                default: // 'all'
+                    filteredCases = allCases;
+            }
+            
+            renderCases(filteredCases);
+        }
+
+        function renderCases(cases) {
+            const container = document.getElementById('casesList');
+            
+            // Update result count in filter section
+            const filterSection = document.querySelector('.filter-section');
+            let countDisplay = filterSection.querySelector('.filter-result-count');
+            if (!countDisplay) {
+                countDisplay = document.createElement('span');
+                countDisplay.className = 'filter-result-count';
+                filterSection.appendChild(countDisplay);
+            }
+            countDisplay.textContent = `共 ${cases.length} 条病例`;
+            
+            if (cases.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <h3>该时间段暂无病例</h3>
+                        <p>请尝试选择其他时间范围</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = cases.map(caseItem => {
+                const profile = caseItem.anonymous_patient_profile || {};
+                return `
+                    <div class="case-card" onclick="viewCase('${caseItem.id}')">
+                        <div class="case-header">
+                            <span class="case-id">病例 #${caseItem.id.slice(0, 8)}</span>
+                            <span class="mention-badge">📢 @提到您</span>
+                        </div>
+                        
+                        <div class="case-info">
+                            <span>👤 ${profile.age_range || '未知年龄'} · ${profile.gender || '未知性别'}</span>
+                            <span>📍 ${profile.city_tier || '未知地区'}</span>
+                            <span>📅 ${new Date(caseItem.created_at).toLocaleDateString('zh-CN')}</span>
+                            <span class="case-category">${caseItem.disease_category || '未分类'}</span>
+                        </div>
+                        
+                        <div class="case-content">
+                            <h4>📝 病例摘要</h4>
+                            <p>${caseItem.anonymized_symptoms?.substring(0, 150) || '暂无症状描述'}${caseItem.anonymized_symptoms?.length > 150 ? '...' : ''}</p>
+                        </div>
+                        
+                        <div class="case-footer">
+                            <div class="case-stats">
+                                <span>👁️ ${caseItem.view_count || 0} 次查看</span>
+                                <span>💬 ${caseItem.comments_count || 0} 条评论</span>
+                            </div>
+                            <button class="case-action">查看详情 →</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function viewCase(caseId) {
+            window.location.href = `/doctor-case-detail.html?id=${caseId}`;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) return;
+            loadDoctorInfo();
+            loadMentionedCases();
+        });
+    </script>
+</body>
+</html>

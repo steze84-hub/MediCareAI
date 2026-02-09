@@ -1,0 +1,206 @@
+{/*
+  TESTING Documentation
+  
+  中文在前，英文在后 | Chinese first, English second
+*/}
+
+
+本文档提供了 MediCare_AI 智能疾病管理系统的完整测试流程。  
+This document provides complete testing procedures for the MediCare_AI intelligent disease management system.
+
+---
+
+## 测试环境准备 | Test Environment Setup
+
+### 前提条件 | Prerequisites
+
+1. 系统已成功部署（参考《部署指南》）/ System has been deployed (refer to Deployment Guide)
+2. 所有服务正常运行 / All services running normally
+3. 数据库迁移已完成 / Database migrations completed
+4. 管理员账号已创建 / Admin account created
+
+### 验证系统状态 | Verify System Status
+
+```bash
+# 检查服务状态 / Check service status
+docker-compose ps
+
+# 所有服务应显示 "Up" 状态 / All services should show "Up" status
+
+# 测试健康检查 / Test health check
+curl https://localhost/health
+
+# 应返回 / Should return: {"status": "healthy", "service": "MediCare_AI API"}
+```
+
+---
+
+## 功能测试流程 | Functional Testing
+
+### 测试 1: 用户注册 | Test 1: User Registration
+
+**目标 | Objective**: 验证新用户可以成功注册 / Verify new users can register successfully
+
+**步骤 | Steps**:
+1. 访问 https://localhost / Visit https://localhost
+2. 点击 "注册" 按钮 / Click "Register" button
+3. 填写注册表单 / Fill registration form
+4. 点击 "注册" 按钮 / Click "Register" button
+
+**预期结果 | Expected Result**:
+- 注册成功 / Registration successful
+- 自动登录到系统 / Auto-login to system
+- 跳转到仪表板页面 / Redirect to dashboard
+
+---
+
+### 测试 2: 用户登录 | Test 2: User Login
+
+**目标 | Objective**: 验证已注册用户可以成功登录 / Verify registered users can login
+
+**步骤 | Steps**:
+1. 访问 https://localhost / Visit https://localhost
+2. 点击 "登录" 按钮 / Click "Login" button
+3. 输入凭据 / Enter credentials
+4. 点击 "登录" 按钮 / Click "Login" button
+
+**预期结果 | Expected Result**:
+- 登录成功 / Login successful
+- 跳转到仪表板页面 / Redirect to dashboard
+- 显示用户姓名 / Display user name
+
+---
+
+### 测试 3-9: [Additional Tests Summary]
+
+Due to document length, key test categories include:
+- 患者管理 / Patient Management
+- AI 辅助诊断 / AI-assisted Diagnosis
+- 文档上传 / Document Upload
+- 用户登出 / User Logout
+
+---
+
+## API 测试 | API Testing
+
+### 后端 API 端点测试 | Backend API Endpoint Testing
+
+访问 / Visit https://localhost/api/docs 查看 Swagger UI / to view Swagger UI
+
+#### 测试认证 API | Test Authentication API
+
+```bash
+# 注册用户 / Register user
+curl -X POST https://localhost/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@medicare.ai",
+    "password": "Test123456!",
+    "full_name": "Test Doctor"
+  }'
+
+# 登录 / Login
+curl -X POST https://localhost/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@medicare.ai",
+    "password": "Test123456!"
+  }'
+
+# 获取当前用户 / Get current user
+curl -X GET https://localhost/api/v1/auth/me \
+  -H "Authorization: Bearer <access_token>"
+```
+
+---
+
+## 性能测试 | Performance Testing
+
+### 响应时间测试 | Response Time Testing
+
+```bash
+# 测试 API 响应时间 / Test API response time
+time curl -X GET https://localhost/api/v1/patients \
+  -H "Authorization: Bearer <access_token>"
+
+# 预期 / Expected: < 1s
+```
+
+**验证点 | Verification Points**:
+- [ ] API 响应时间 < 1s / API response time < 1s
+- [ ] 页面加载时间 < 3s / Page load time < 3s
+- [ ] 文件上传速度正常 / File upload speed normal
+
+---
+
+## 安全测试 | Security Testing
+
+### SQL 注入测试 | SQL Injection Testing
+
+```bash
+# 尝试 SQL 注入 / Attempt SQL injection
+curl -X POST https://localhost/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@medicare.ai\" OR 1=1--",
+    "password": "any"
+  }'
+
+# 预期 / Expected: 返回 401 未授权 / Return 401 Unauthorized
+```
+
+### XSS 测试 | XSS Testing
+
+```bash
+# 尝试 XSS 攻击 / Attempt XSS attack
+curl -X POST https://localhost/api/v1/patients \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "<script>alert(\"XSS\")</script>",
+    "date_of_birth": "2015-05-10"
+  }'
+
+# 预期 / Expected: 请求被拒绝或数据被转义 / Request rejected or data escaped
+```
+
+---
+
+## 测试报告模板 | Test Report Template
+
+```markdown
+# 测试报告 | Test Report
+
+测试日期 / Test Date: YYYY-MM-DD
+测试人员 / Tester: [Name]
+系统版本 / System Version: v2.0.0
+
+## 测试结果 | Test Results
+
+| 测试项 / Test Item | 状态 / Status | 备注 / Notes |
+|-------------------|--------------|-------------|
+| 用户注册 / User Registration | ✅/❌ | |
+| 用户登录 / User Login | ✅/❌ | |
+| 患者管理 / Patient Management | ✅/❌ | |
+| AI 诊断 / AI Diagnosis | ✅/❌ | |
+| API 测试 / API Testing | ✅/❌ | |
+
+## 发现的问题 | Issues Found
+
+1. [问题描述 / Issue Description]
+   - 严重程度 / Severity: 高/中/低 / High/Medium/Low
+   - 复现步骤 / Reproduction steps
+   - 预期行为 / Expected behavior
+   - 实际行为 / Actual behavior
+
+## 总结 | Summary
+
+- 总测试数 / Total Tests: XX
+- 通过 / Passed: XX
+- 失败 / Failed: XX
+- 通过率 / Pass Rate: XX%
+```
+
+---
+
+**测试完成！| Testing Complete!**

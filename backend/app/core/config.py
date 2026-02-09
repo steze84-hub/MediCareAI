@@ -33,8 +33,25 @@ class Settings(BaseSettings):
     ai_api_url: str = "http://172.30.66.203:8033/v1/"
     ai_model_id: str = "unsloth/GLM-4.7-Flash-GGUF:BF16"
     
+    # Embedding model settings (Qwen)
+    embedding_api_key: str = ""
+    embedding_api_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    embedding_model_id: str = "text-embedding-v3"
+    embedding_dimensions: int = 1024
+    
     max_file_size: int = 200 * 1024 * 1024  # 200MB
     upload_path: str = "/app/uploads"
+    
+    # Public file URL for MinerU API access (optional fallback)
+    # If set, will be used as fallback when external hosting services fail
+    # Example: "http://your-server.com/api/v1/documents/file"
+    public_file_url: Optional[str] = None
+    
+    # Alibaba Cloud OSS Configuration
+    oss_access_key_id: Optional[str] = None
+    oss_access_key_secret: Optional[str] = None
+    oss_bucket: Optional[str] = None
+    oss_endpoint: Optional[str] = None
     
     cors_origins: List[str] = ["http://localhost:3000"]
     allowed_hosts: List[str] = ["localhost", "127.0.0.1"]

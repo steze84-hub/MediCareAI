@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍⚕️</text></svg>">
+    <title>MediCare AI - 个人设置</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 0 30px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #11998e;
+        }
+
+        .nav-brand .logo {
+            font-size: 28px;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: #666;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            color: #11998e;
+            background: rgba(17, 153, 142, 0.1);
+        }
+
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .nav-user button {
+            background: #f5f5f5;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .nav-user button:hover {
+            background: #e0e0e0;
+        }
+
+        .main-content {
+            margin-top: 60px;
+            padding: 30px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .page-header {
+            background: white;
+            padding: 24px 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+        }
+
+        .page-header h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-section {
+            background: white;
+            padding: 24px 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+        }
+
+        .form-section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #11998e;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .form-group label .required {
+            color: #e74c3c;
+            margin-left: 4px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="tel"],
+        .form-group input[type="email"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #11998e;
+            box-shadow: 0 0 0 3px rgba(17, 153, 142, 0.2);
+        }
+
+        .form-group input:read-only {
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #888;
+            font-size: 12px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);
+        }
+
+        .btn-cancel {
+            background: white;
+            color: #11998e;
+            border: 1px solid #11998e;
+            padding: 14px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(17, 153, 142, 0.05);
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info-card {
+            background: rgba(17, 153, 142, 0.05);
+            border-left: 4px solid #11998e;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .info-card p {
+            margin: 0;
+            color: #555;
+            font-size: 13px;
+        }
+
+        .readonly-field {
+            background: #f8f9fa !important;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">👨‍⚕️</span>
+            <span>MediCare AI 医生平台</span>
+        </div>
+        <div class="nav-menu">
+            <a href="/doctor-dashboard.html">工作台</a>
+            <a href="/doctor-cases.html">病例浏览</a>
+            <a href="/doctor-mentions.html">@我的</a>
+            <a href="/doctor-export.html">科研导出</a>
+        </div>
+        <div class="nav-user">
+            <span id="doctorName"></span>
+            <button onclick="logout()">退出</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="page-header">
+            <h1>⚙️ 个人设置</h1>
+            <p>管理您的个人信息和专业资质</p>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+
+        <!-- 账户信息 -->
+        <div class="form-section">
+            <h2>账户信息</h2>
+            
+            <div class="info-card">
+                <p>以下信息用于登录和系统识别，邮箱地址不可修改。</p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>邮箱地址</label>
+                    <input type="email" id="email" readonly class="readonly-field">
+                </div>
+                
+                <div class="form-group">
+                    <label>姓名 <span class="required">*</span></label>
+                    <input type="text" id="fullName" placeholder="请输入您的姓名">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>手机号码</label>
+                    <input type="tel" id="phone" placeholder="请输入手机号码">
+                    <small>注册时填写的手机号</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>昵称</label>
+                    <input type="text" id="displayName" placeholder="自定义昵称，用于平台显示">
+                    <small>如：张医生、李主任等</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 职业信息 -->
+        <div class="form-section">
+            <h2>职业信息</h2>
+            
+            <div class="info-card">
+                <p>以下是您在注册时填写的执业信息，用于平台展示。如需修改，请联系管理员。</p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>工作单位</label>
+                    <input type="text" id="hospitalDisplay" readonly class="readonly-field" placeholder="注册时填写的执业医院">
+                    <small>注册信息，不可修改</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>专业类型</label>
+                    <input type="text" id="professionalTypeDisplay" readonly class="readonly-field" placeholder="注册时填写的专业类型">
+                    <small>注册信息，不可修改（如：内科、外科、儿科等）</small>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>职称 <span class="required">*</span></label>
+                    <select id="title">
+                        <option value="">请选择职称</option>
+                        <option value="住院医师">住院医师</option>
+                        <option value="主治医师">主治医师</option>
+                        <option value="副主任医师">副主任医师</option>
+                        <option value="主任医师">主任医师</option>
+                        <option value="教授">教授</option>
+                        <option value="副教授">副教授</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>所属科室 <span class="required">*</span></label>
+                    <input type="text" id="department" placeholder="例如：呼吸内科、心内科">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>专业领域 <span class="required">*</span></label>
+                    <input type="text" id="specialty" placeholder="例如：呼吸系统疾病、心血管疾病">
+                </div>
+                
+                <div class="form-group">
+                    <label>执业医院 <span class="required">*</span></label>
+                    <input type="text" id="hospital" placeholder="请输入医院全称">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>执业医师编号 <span class="required">*</span></label>
+                    <input type="text" id="licenseNumber" placeholder="请输入您的执业医师编号">
+                    <small>用于验证您的医生资质</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 保存按钮 -->
+        <div class="form-section">
+            <div class="btn-group">
+                <button class="btn-save" onclick="saveProfile()">保存设置</button>
+                <button class="btn-cancel" onclick="loadProfile()">重置</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/doctor-login.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/doctor-login.html';
+        }
+
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert alert-${type} show`;
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 3000);
+        }
+
+        async function loadProfile() {
+            if (!checkAuth()) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
+                    throw new Error('加载失败');
+                }
+
+                const data = await response.json();
+                
+                // Debug: log all received data
+                console.log('Profile data received:', data);
+                console.log('Phone:', data.phone);
+                console.log('License:', data.license_number);
+                
+                // Fill in the form
+                document.getElementById('email').value = data.email || '';
+                document.getElementById('fullName').value = data.full_name || '';
+                document.getElementById('phone').value = data.phone || '';
+                document.getElementById('displayName').value = data.display_name || '';
+                document.getElementById('title').value = data.title || '';
+                document.getElementById('department').value = data.department || '';
+                document.getElementById('specialty').value = data.specialty || '';
+                document.getElementById('hospital').value = data.hospital || '';
+                document.getElementById('licenseNumber').value = data.license_number || '';
+                
+                // Fill readonly display fields (注册信息展示)
+                document.getElementById('hospitalDisplay').value = data.hospital || '';
+                document.getElementById('professionalTypeDisplay').value = data.professional_type || '';
+                
+                // Update name in navbar
+                document.getElementById('doctorName').textContent = data.full_name || data.display_name || '医生';
+            } catch (error) {
+                showAlert('加载个人信息失败', 'error');
+            }
+        }
+
+        async function saveProfile() {
+            if (!checkAuth()) return;
+
+            const fullName = document.getElementById('fullName').value.trim();
+            const title = document.getElementById('title').value;
+            const department = document.getElementById('department').value.trim();
+            const specialty = document.getElementById('specialty').value.trim();
+            const hospital = document.getElementById('hospital').value.trim();
+            const licenseNumber = document.getElementById('licenseNumber').value.trim();
+
+            // Validation
+            if (!fullName) {
+                showAlert('请填写姓名', 'error');
+                return;
+            }
+            if (!title) {
+                showAlert('请选择职称', 'error');
+                return;
+            }
+            if (!department) {
+                showAlert('请填写所属科室', 'error');
+                return;
+            }
+            if (!specialty) {
+                showAlert('请填写专业领域', 'error');
+                return;
+            }
+            if (!hospital) {
+                showAlert('请填写执业医院', 'error');
+                return;
+            }
+            if (!licenseNumber) {
+                showAlert('请填写执业医师编号', 'error');
+                return;
+            }
+
+            const profileData = {
+                full_name: fullName,
+                phone: document.getElementById('phone').value.trim(),
+                display_name: document.getElementById('displayName').value.trim(),
+                title: title,
+                department: department,
+                specialty: specialty,
+                hospital: hospital,
+                license_number: licenseNumber
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/auth/me`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(profileData)
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
+                    const error = await response.json();
+                    throw new Error(error.detail || '保存失败');
+                }
+
+                showAlert('个人信息保存成功', 'success');
+                loadProfile(); // Reload to get updated data
+            } catch (error) {
+                showAlert('保存失败: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) return;
+            loadProfile();
+        });
+    </script>
+</body>
+</html>

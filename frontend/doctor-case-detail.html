@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍⚕️</text></svg>">
+    <title>MediCare AI - 病例详情</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 0 30px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #11998e;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: #666;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 0 15px;
+        }
+
+        .nav-menu a:hover, .nav-menu a.active {
+            color: #11998e;
+            background: rgba(17, 153, 142, 0.1);
+        }
+
+        .nav-user button {
+            background: #f5f5f5;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .main-content {
+            margin-top: 60px;
+            padding: 30px;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .back-link {
+            color: #11998e;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .case-detail {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .case-header {
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .case-title {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .case-meta {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .case-meta span {
+            margin-right: 20px;
+        }
+
+        .case-section {
+            margin-bottom: 25px;
+        }
+
+        .case-section h3 {
+            color: #11998e;
+            font-size: 16px;
+            margin-bottom: 10px;
+            padding-left: 10px;
+            border-left: 3px solid #11998e;
+        }
+
+        .case-content {
+            color: #555;
+            line-height: 1.8;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .documents-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .document-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #11998e;
+        }
+
+        .document-item .icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .document-item .info {
+            flex: 1;
+        }
+
+        .document-item .filename {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .document-item .status {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .doc-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .doc-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .preview-btn {
+            background: rgba(17, 153, 142, 0.1);
+            color: #11998e;
+        }
+
+        .preview-btn:hover {
+            background: rgba(17, 153, 142, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);
+        }
+
+        /* 评论区域 */
+        .comments-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .comments-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .comments-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+
+        .comment-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .comment-form select, .comment-form textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+
+        .comment-form textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .comment-form button {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .comment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .comment-item {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #11998e;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .comment-author .badge {
+            background: rgba(17, 153, 142, 0.1);
+            color: #11998e;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+
+        .comment-meta {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .comment-type {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .comment-content {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .comment-actions {
+            margin-top: 10px;
+            text-align: right;
+        }
+
+        .comment-actions button {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 13px;
+            margin-left: 15px;
+        }
+
+        .comment-actions button:hover {
+            color: #11998e;
+        }
+
+        .empty-comments {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #11998e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Markdown Rendering Styles */
+        .markdown-body {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .markdown-body h1,
+        .markdown-body h2,
+        .markdown-body h3,
+        .markdown-body h4,
+        .markdown-body h5,
+        .markdown-body h6 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            line-height: 1.25;
+            color: #333;
+        }
+
+        .markdown-body h1 {
+            font-size: 2em;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+
+        .markdown-body h2 {
+            font-size: 1.5em;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 0.3em;
+        }
+
+        .markdown-body h3 {
+            font-size: 1.25em;
+        }
+
+        .markdown-body h4 {
+            font-size: 1em;
+        }
+
+        .markdown-body p {
+            margin-bottom: 16px;
+        }
+
+        .markdown-body strong {
+            font-weight: 600;
+            color: #24292e;
+        }
+
+        .markdown-body em {
+            font-style: italic;
+        }
+
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 16px;
+            display: block;
+            overflow-x: auto;
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            padding: 12px 16px;
+            border: 1px solid #dfe2e5;
+            text-align: left;
+        }
+
+        .markdown-body table th {
+            background-color: #f6f8fa;
+            font-weight: 600;
+            color: #24292e;
+        }
+
+        .markdown-body table tr:nth-child(2n) {
+            background-color: #f6f8fa;
+        }
+
+        .markdown-body ul,
+        .markdown-body ol {
+            margin-bottom: 16px;
+            padding-left: 2em;
+        }
+
+        .markdown-body li {
+            margin-bottom: 8px;
+        }
+
+        .markdown-body li > ul,
+        .markdown-body li > ol {
+            margin-top: 8px;
+            margin-bottom: 0;
+        }
+
+        .markdown-body code {
+            background-color: rgba(27, 31, 35, 0.05);
+            border-radius: 3px;
+            font-size: 85%;
+            margin: 0;
+            padding: 0.2em 0.4em;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        }
+
+        .markdown-body pre {
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            font-size: 85%;
+            line-height: 1.45;
+            overflow: auto;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent;
+            border: 0;
+            display: inline;
+            line-height: inherit;
+            margin: 0;
+            overflow: visible;
+            padding: 0;
+            word-wrap: normal;
+        }
+
+        .markdown-body blockquote {
+            border-left: 4px solid #11998e;
+            color: #6a737d;
+            padding: 0 1em;
+            margin: 0 0 16px 0;
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .markdown-body blockquote > :first-child {
+            margin-top: 0;
+        }
+
+        .markdown-body blockquote > :last-child {
+            margin-bottom: 0;
+        }
+
+        .markdown-body hr {
+            border: 0;
+            border-top: 1px solid #e1e4e8;
+            margin: 24px 0;
+        }
+
+        .markdown-body a {
+            color: #11998e;
+            text-decoration: none;
+        }
+
+        .markdown-body a:hover {
+            text-decoration: underline;
+        }
+
+        .markdown-body img {
+            max-width: 100%;
+            box-sizing: content-box;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">👨‍⚕️</span>
+            <span>MediCare AI 医生平台</span>
+        </div>
+        <div class="nav-menu">
+            <a href="/doctor-dashboard.html">工作台</a>
+            <a href="/doctor-cases.html" class="active">病例浏览</a>
+            <a href="/doctor-mentions.html">@我的</a>
+        </div>
+        <div class="nav-user">
+            <span id="doctorName"></span>
+            <button onclick="logout()">退出</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <a href="/doctor-cases.html" class="back-link">← 返回病例列表</a>
+
+        <div id="caseDetail" class="case-detail">
+            <div class="loading">
+                <span class="spinner"></span> 加载病例详情...
+            </div>
+        </div>
+
+        <div class="comments-section">
+            <div class="comments-header">
+                <h2>💬 专业讨论</h2>
+            </div>
+
+            <div class="comment-form">
+                <h4>发表您的专业建议</h4>
+                <select id="commentType">
+                    <option value="general">一般评论</option>
+                    <option value="suggestion">诊断建议</option>
+                    <option value="diagnosis_opinion">诊断意见</option>
+                    <option value="treatment_advice">治疗建议</option>
+                </select>
+                <textarea id="commentContent" placeholder="请输入您的专业建议或诊疗意见..."></textarea>
+                <button onclick="submitComment()">发表评论</button>
+            </div>
+
+            <div id="commentsList" class="comment-list">
+                <div class="loading">
+                    <span class="spinner"></span> 加载评论...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let currentCaseId = null;
+
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/doctor-login.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/doctor-login.html';
+        }
+
+        // 格式化诊断内容（支持Markdown样式）
+        function formatDiagnosis(diagnosis) {
+            if (!diagnosis) return '暂无诊断';
+            // 使用marked.js解析Markdown
+            return marked.parse(diagnosis);
+        }
+
+        // 格式化文档内容，提高可读性
+        function formatDocumentContent(content) {
+            if (!content) return '暂无内容';
+            
+            // Check if content already contains HTML (like tables from MinerU)
+            const hasHtml = /<[a-z][\s\S]*>/i.test(content);
+            
+            if (hasHtml) {
+                // Content already has HTML, wrap it in a div with styling
+                return '<div style="font-family: \'Segoe UI\', \'Microsoft YaHei\', sans-serif; line-height: 1.8;">' + content + '</div>';
+            } else {
+                // Plain text - escape HTML and wrap in pre
+                const escaped = content
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+                return '<pre style="white-space: pre-wrap; word-wrap: break-word; font-family: \'Segoe UI\', \'Microsoft YaHei\', sans-serif; line-height: 1.8;">' + escaped + '</pre>';
+            }
+        }
+
+        // 下载文档（带认证）
+        async function downloadDocument(docId, filename) {
+            try {
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`${API_BASE}/api/v1/documents/${docId}/download`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('请先登录后再下载文档');
+                        return;
+                    } else if (response.status === 403) {
+                        alert('您没有权限访问此文档');
+                        return;
+                    }
+                    throw new Error(`下载失败: ${response.status}`);
+                }
+
+                // 获取文件blob
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+
+                // 创建临时下载链接
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename || 'document';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                // 释放URL对象
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('下载文档失败:', error);
+                alert('下载失败: ' + error.message);
+            }
+        }
+
+        // 查看文档
+        async function viewDocument(docId, filename) {
+            try {
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`${API_BASE}/api/v1/documents/${docId}/content`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // 创建模态框显示文档内容
+                    let rawContent = data.cleaned_content || data.extracted_content || '暂无内容预览';
+                    let displayContent = '';
+                    
+                    // Handle object content (JSON structure)
+                    if (typeof rawContent === 'object' && rawContent !== null) {
+                        // Extract text field if it exists
+                        if (rawContent.text) {
+                            displayContent = rawContent.text;
+                        } else {
+                            // Fallback: stringify without metadata
+                            displayContent = JSON.stringify(rawContent, null, 2);
+                        }
+                    } else {
+                        displayContent = rawContent;
+                    }
+                    
+                    // Format content for better readability
+                    displayContent = formatDocumentContent(displayContent);
+                    
+                    // Debug: log the content to console
+                    console.log('Document content preview:', displayContent.substring(0, 500));
+                    
+                    showDocumentModal(filename, displayContent, docId);
+                } else {
+                    // 如果无法获取内容，尝试下载
+                    downloadDocument(docId, filename);
+                }
+            } catch (error) {
+                console.error('加载文档失败:', error);
+                alert('文档加载失败，尝试下载...');
+                downloadDocument(docId, filename);
+            }
+        }
+
+        // 显示文档模态框
+        function showDocumentModal(filename, content, docId) {
+            // 创建模态框
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.6); z-index: 3000;
+                display: flex; justify-content: center; align-items: center;
+                backdrop-filter: blur(4px);
+            `;
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 16px; width: 92%; max-width: 900px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+                    <div style="padding: 24px 28px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                                📄
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 18px; color: #1f2937; font-weight: 600;">${filename}</h3>
+                                <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">文档预览</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 12px;">
+                            ${docId ? `
+                                <button onclick="downloadDocument('${docId}', '${filename}')" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(17, 153, 142, 0.2);" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 12px -2px rgba(17, 153, 142, 0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(17, 153, 142, 0.2)';">
+                                    <span>⬇️</span>
+                                    <span>下载文档</span>
+                                </button>
+                            ` : ''}
+                            <button onclick="this.closest('.doc-modal').remove()" style="background: #f3f4f6; border: none; width: 40px; height: 40px; border-radius: 8px; cursor: pointer; font-size: 20px; color: #6b7280; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='#e5e7eb'; this.style.color='#374151';" onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280';">×</button>
+                        </div>
+                    </div>
+                    <div style="padding: 28px; overflow-y: auto; flex: 1; line-height: 1.8; color: #374151; background: #fafafa;">
+                        <div id="docPreviewContent" style="background: white; padding: 32px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 200px; font-size: 15px; line-height: 1.9; font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;"></div>
+                    </div>
+                    <div style="padding: 16px 28px; border-top: 1px solid #e5e7eb; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-size: 13px; color: #6b7280;">
+                            💡 提示：预览内容仅供参考，完整内容请下载文档查看
+                        </div>
+                        ${docId ? `
+                            <button onclick="downloadDocument('${docId}', '${filename}')" style="background: transparent; color: #11998e; border: 1px solid #11998e; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;" onmouseover="this.style.background='rgba(17, 153, 142, 0.05)';" onmouseout="this.style.background='transparent';">
+                                再次下载 ⬇️
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            modal.className = 'doc-modal';
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.remove();
+            };
+            document.body.appendChild(modal);
+            
+            // Set content after modal is added to DOM
+            const contentDiv = modal.querySelector('#docPreviewContent');
+            if (contentDiv) {
+                contentDiv.innerHTML = content || '<div style="text-align: center; color: #9ca3af; padding: 60px 20px;"><div style="font-size: 48px; margin-bottom: 16px;">📭</div><div>暂无内容预览</div></div>';
+            }
+        }
+
+        function getCaseId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+
+        async function loadCaseDetail() {
+            const container = document.getElementById('caseDetail');
+            currentCaseId = getCaseId();
+
+            if (!currentCaseId) {
+                container.innerHTML = '<div class="loading">❌ 未找到病例ID</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/doctor/cases/${currentCaseId}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    renderCaseDetail(data);
+                } else {
+                    throw new Error('加载失败');
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="loading">❌ 加载病例详情失败</div>';
+            }
+        }
+
+        function renderCaseDetail(data) {
+            const container = document.getElementById('caseDetail');
+            const caseItem = data.case;
+            const profile = caseItem.anonymous_patient_profile || {};
+
+            container.innerHTML = `
+                <div class="case-header">
+                    <h1 class="case-title">病例 #${caseItem.id.slice(0, 8)}</h1>
+                    <div class="case-meta">
+                        <span>👤 ${profile.age_range || '未知年龄'} · ${profile.gender || '未知性别'}</span>
+                        <span>📍 ${profile.city_tier || '未知地区'}</span>
+                        <span>📅 ${new Date(caseItem.created_at).toLocaleDateString('zh-CN')}</span>
+                        <span>👁️ ${caseItem.view_count || 0} 次查看</span>
+                    </div>
+                </div>
+
+                <div class="case-section">
+                    <h3>📝 症状描述</h3>
+                    <div class="case-content">${caseItem.anonymized_symptoms || '暂无描述'}</div>
+                </div>
+
+                <div class="case-section">
+                    <h3>🔍 AI诊断结果</h3>
+                    <div class="case-content ai-diagnosis markdown-body" style="line-height: 1.8;">${formatDiagnosis(caseItem.anonymized_diagnosis) || '暂无诊断'}</div>
+                </div>
+
+                ${data.documents && data.documents.length > 0 ? `
+                <div class="case-section">
+                    <h3>📎 检查资料</h3>
+                    <div class="documents-list">
+                        ${data.documents.map(doc => `
+                            <div class="document-item" style="cursor: default;">
+                                <span class="icon">📄</span>
+                                <div class="info" style="flex: 1;">
+                                    <div class="filename">${doc.filename}</div>
+                                    <div class="status">${doc.pii_cleaning_status === 'completed' ? '✓ 已脱敏' : '处理中'}</div>
+                                </div>
+                                <div class="doc-actions" style="display: flex; gap: 8px;">
+                                    ${doc.pii_cleaning_status === 'completed' ? `
+                                        <button onclick="viewDocument('${doc.id}', '${doc.filename}')" class="doc-btn preview-btn" title="预览内容">
+                                            👁️ 预览
+                                        </button>
+                                    ` : ''}
+                                    ${doc.file_url ? `
+                                        <button onclick="downloadDocument('${doc.id}', '${doc.filename}')" class="doc-btn download-btn" title="下载文件">
+                                            ⬇️ 下载
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        }
+
+        async function loadComments() {
+            const container = document.getElementById('commentsList');
+            if (!currentCaseId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/doctor/cases/${currentCaseId}/comments`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+
+                if (response.ok) {
+                    const comments = await response.json();
+                    renderComments(comments);
+                } else {
+                    throw new Error('加载失败');
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="empty-comments">加载评论失败</div>';
+            }
+        }
+
+        function renderComments(comments) {
+            const container = document.getElementById('commentsList');
+
+            if (!comments || comments.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-comments">
+                        <p>💬 暂无评论，成为第一个发表专业建议的医生吧</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const typeLabels = {
+                'suggestion': '💡 诊断建议',
+                'diagnosis_opinion': '🔍 诊断意见',
+                'treatment_advice': '💊 治疗建议',
+                'general': '💬 一般评论'
+            };
+
+            container.innerHTML = comments.map(comment => {
+                // Render patient replies if any
+                let repliesHtml = '';
+                if (comment.patient_replies && comment.patient_replies.length > 0) {
+                    repliesHtml = `
+                        <div class="patient-replies" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e0e0e0;">
+                            ${comment.patient_replies.map(reply => `
+                                <div class="patient-reply" style="
+                                    background: #f0f8ff;
+                                    border-left: 3px solid #28a745;
+                                    padding: 10px 12px;
+                                    margin-top: 8px;
+                                    border-radius: 6px;
+                                    font-size: 14px;
+                                ">
+                                    <div style="
+                                        display: flex;
+                                        justify-content: space-between;
+                                        align-items: center;
+                                        margin-bottom: 6px;
+                                    ">
+                                        <span style="font-weight: 600; color: #28a745;">🙋 患者回复</span>
+                                        <span style="color: #999; font-size: 12px;">${new Date(reply.created_at).toLocaleString('zh-CN')}</span>
+                                    </div>
+                                    <div style="color: #333; line-height: 1.5;">${reply.content}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <div>
+                                <span class="comment-author">
+                                    ${comment.doctor_name}
+                                    ${comment.doctor_specialty ? `<span class="badge">${comment.doctor_specialty}</span>` : ''}
+                                </span>
+                                <div class="comment-meta">
+                                    ${comment.doctor_hospital || ''} · ${new Date(comment.created_at).toLocaleString('zh-CN')}
+                                    ${comment.status === 'edited' ? '(已编辑)' : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <span class="comment-type">${typeLabels[comment.comment_type] || '💬 一般评论'}</span>
+                        <div class="comment-content">${comment.content}</div>
+                        ${repliesHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function submitComment() {
+            const type = document.getElementById('commentType').value;
+            const content = document.getElementById('commentContent').value.trim();
+
+            if (!content) {
+                alert('请输入评论内容');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/doctor/cases/${currentCaseId}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        comment_type: type,
+                        content: content,
+                        is_public: true
+                    })
+                });
+
+                if (response.ok) {
+                    document.getElementById('commentContent').value = '';
+                    loadComments();
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || '发表评论失败');
+                }
+            } catch (error) {
+                alert('发表评论失败：' + error.message);
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) return;
+            loadCaseDetail();
+            loadComments();
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</body>
+</html>

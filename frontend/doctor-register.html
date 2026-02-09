@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍⚕️</text></svg>">
+    <title>医生认证申请 - MediCare AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .platform-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .register-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .register-subtitle {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .info-box {
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 25px;
+            font-size: 13px;
+            color: #2e7d32;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #11998e;
+            box-shadow: 0 0 0 3px rgba(17, 153, 142, 0.1);
+        }
+
+        .required::after {
+            content: " *";
+            color: #f44336;
+        }
+
+        .register-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .register-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .register-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .divider {
+            margin: 25px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            color: #999;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .login-link a {
+            color: #11998e;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .back-link a {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .result.loading {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #f3f3f3;
+            border-top-color: #11998e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-header">
+            <div class="platform-badge">👨‍⚕️ 医生认证</div>
+            <div class="logo">🏥</div>
+            <h1 class="register-title">MediCare AI</h1>
+            <p class="register-subtitle">医生认证申请 - 加入我们的医疗专家团队</p>
+        </div>
+
+        <div class="info-box">
+            <strong>认证说明：</strong>提交申请后，我们的管理员会在1-3个工作日内审核您的资质。审核通过后，您将可以使用医生平台的全部功能。
+        </div>
+
+        <form id="registerForm">
+            <h3 style="margin-bottom: 20px; color: #333;">基本信息</h3>
+            
+            <div class="form-group">
+                <label for="fullName" class="required">姓名</label>
+                <input type="text" id="fullName" name="fullName" required
+                       placeholder="请输入您的真实姓名">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="email" class="required">邮箱</label>
+                    <input type="email" id="email" name="email" required
+                           placeholder="请输入邮箱地址">
+                </div>
+                <div class="form-group">
+                    <label for="phone" class="required">手机号</label>
+                    <input type="tel" id="phone" name="phone" required
+                           placeholder="请输入手机号码">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password" class="required">密码</label>
+                    <input type="password" id="password" name="password" required
+                           placeholder="至少8位字符" minlength="8" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword" class="required">确认密码</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required
+                           placeholder="再次输入密码" minlength="8" autocomplete="new-password">
+                </div>
+            </div>
+
+            <h3 style="margin: 30px 0 20px 0; color: #333;">执业信息</h3>
+
+            <div class="form-group">
+                <label for="licenseNumber" class="required">执业证书编号</label>
+                <input type="text" id="licenseNumber" name="licenseNumber" required
+                       placeholder="请输入医师执业证书编号">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="title" class="required">职称</label>
+                    <select id="title" name="title" required>
+                        <option value="">请选择职称</option>
+                        <option value="主任医师">主任医师</option>
+                        <option value="副主任医师">副主任医师</option>
+                        <option value="主治医师">主治医师</option>
+                        <option value="住院医师">住院医师</option>
+                        <option value="实习医师">实习医师</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="department" class="required">科室</label>
+                    <select id="department" name="department" required>
+                        <option value="">请选择科室</option>
+                        <option value="内科">内科</option>
+                        <option value="外科">外科</option>
+                        <option value="儿科">儿科</option>
+                        <option value="妇产科">妇产科</option>
+                        <option value="骨科">骨科</option>
+                        <option value="眼科">眼科</option>
+                        <option value="耳鼻喉科">耳鼻喉科</option>
+                        <option value="皮肤科">皮肤科</option>
+                        <option value="精神科">精神科</option>
+                        <option value="中医科">中医科</option>
+                        <option value="康复科">康复科</option>
+                        <option value="急诊科">急诊科</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="professionalType" class="required">专业类型</label>
+                    <select id="professionalType" name="professionalType" required>
+                        <option value="">请选择专业类型</option>
+                        <option value="内科">内科</option>
+                        <option value="外科">外科</option>
+                        <option value="儿科">儿科</option>
+                        <option value="妇产科">妇产科</option>
+                        <option value="骨科">骨科</option>
+                        <option value="眼科">眼科</option>
+                        <option value="耳鼻喉科">耳鼻喉科</option>
+                        <option value="皮肤科">皮肤科</option>
+                        <option value="精神科">精神科</option>
+                        <option value="中医科">中医科</option>
+                        <option value="康复科">康复科</option>
+                        <option value="急诊科">急诊科</option>
+                        <option value="肿瘤科">肿瘤科</option>
+                        <option value="神经科">神经科</option>
+                        <option value="心血管科">心血管科</option>
+                        <option value="呼吸科">呼吸科</option>
+                        <option value="消化科">消化科</option>
+                        <option value="内分泌科">内分泌科</option>
+                        <option value="其他">其他</option>
+                    </select>
+                    <small>请选择您执业资格认证的专业大类</small>
+                </div>
+                <div class="form-group">
+                    <label for="specialty" class="required">专业领域</label>
+                    <input type="text" id="specialty" name="specialty" required
+                           placeholder="如：儿童哮喘、冠心病介入等">
+                    <small>请填写您擅长的具体细分领域</small>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="hospital" class="required">执业医院</label>
+                <input type="text" id="hospital" name="hospital" required
+                       placeholder="请输入医院全称">
+            </div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input type="checkbox" id="terms" required style="margin-right: 8px;">
+                    <label for="terms" style="display: inline; font-weight: normal;">
+                        我已阅读并同意 <a href="/terms-of-service.html" target="_blank">用户协议</a> 和 <a href="/privacy-policy.html" target="_blank">隐私政策</a>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="register-btn" id="submitBtn">
+                提交认证申请
+            </button>
+        </form>
+
+        <div class="divider">
+            <span>或</span>
+        </div>
+
+        <div class="login-link">
+            <p style="margin: 0; color: #666;">
+                已有账号？<a href="/doctor-login.html">立即登录</a>
+            </p>
+        </div>
+
+        <div class="back-link">
+            <a href="/platform-select.html">← 返回平台选择</a>
+        </div>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const fullName = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const licenseNumber = document.getElementById('licenseNumber').value;
+            const title = document.getElementById('title').value;
+            const department = document.getElementById('department').value;
+            const professionalType = document.getElementById('professionalType').value;
+            const specialty = document.getElementById('specialty').value;
+            const hospital = document.getElementById('hospital').value;
+            const terms = document.getElementById('terms').checked;
+            const resultDiv = document.getElementById('result');
+
+            // 验证
+            if (!terms) {
+                showResult('error', '请同意用户协议和隐私政策');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showResult('error', '两次输入的密码不一致');
+                return;
+            }
+
+            if (password.length < 8) {
+                showResult('error', '密码长度至少为8位');
+                return;
+            }
+
+            // 禁用提交按钮
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span> 提交中...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/auth/register/doctor`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        full_name: fullName,
+                        phone: phone,
+                        title: title,
+                        department: department,
+                        professional_type: professionalType,
+                        specialty: specialty,
+                        hospital: hospital,
+                        license_number: licenseNumber
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('success', '认证申请已提交！我们会尽快审核您的资质，请留意邮箱通知。');
+                    setTimeout(() => {
+                        window.location.href = '/doctor-login.html';
+                    }, 3000);
+                } else {
+                    showResult('error', data.detail || '提交失败，请检查信息是否完整');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '提交认证申请';
+                }
+            } catch (error) {
+                showResult('error', '网络错误：' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '提交认证申请';
+            }
+        });
+
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type} show`;
+            resultDiv.innerHTML = `<strong>${message}</strong>`;
+        }
+    </script>
+</body>
+</html>

@@ -21,6 +21,15 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     is_active: Optional[bool] = None
+    # Doctor-specific fields
+    title: Optional[str] = None
+    department: Optional[str] = None
+    professional_type: Optional[str] = None
+    specialty: Optional[str] = None
+    hospital: Optional[str] = None
+    license_number: Optional[str] = None
+    display_name: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class UserResponse(UserBase):

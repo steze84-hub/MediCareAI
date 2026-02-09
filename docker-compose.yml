@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # PostgreSQL数据库
+  # PostgreSQL数据库 (with pgvector extension)
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:pg17
     container_name: medicare_postgres
     environment:
       POSTGRES_DB: medicare_ai
@@ -16,6 +16,7 @@ services:
       - "0.0.0.0:5432:5432"
     networks:
       - medicare_network
+    restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U medicare_user -d medicare_ai"]
       interval: 30s
@@ -33,6 +34,7 @@ services:
       - redis_data:/data
     networks:
       - medicare_network
+    restart: always
 
   # 后端API
   backend:
@@ -51,6 +53,12 @@ services:
       MINERU_TOKEN: ${MINERU_TOKEN}
       AI_API_KEY: ${AI_API_KEY}
       AI_API_URL: ${AI_API_URL}
+      PUBLIC_FILE_URL: ${PUBLIC_FILE_URL}
+      # Alibaba Cloud OSS Configuration
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET}
+      OSS_BUCKET: ${OSS_BUCKET}
+      OSS_ENDPOINT: ${OSS_ENDPOINT}
       DEBUG: "true"
     ports:
       - "0.0.0.0:8000:8000"
@@ -93,7 +101,9 @@ services:
       dockerfile: Dockerfile
     container_name: medicare_nginx
     ports:
-      - "0.0.0.0:80:80"
+      - "0.0.0.0:80:80"        # 患者平台
+      - "0.0.0.0:8080:8080"    # 管理员平台
+      - "0.0.0.0:8081:8081"    # 医生平台
       - "0.0.0.0:443:443"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf

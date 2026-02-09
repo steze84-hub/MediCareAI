@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+    <title>MediCare AI - 医生认证</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fa; min-height: 100vh; }
+        .navbar { background: white; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); padding: 0 30px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: bold; color: #fc4a1a; }
+        .nav-menu { display: flex; gap: 30px; }
+        .nav-menu a { text-decoration: none; color: #666; font-weight: 500; padding: 5px 10px; border-radius: 5px; transition: all 0.3s; }
+        .nav-menu a:hover, .nav-menu a.active { color: #fc4a1a; background: rgba(252, 74, 26, 0.1); }
+        .nav-user button { background: #f5f5f5; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .main-content { margin-top: 60px; padding: 30px; max-width: 1400px; margin-left: auto; margin-right: auto; }
+        .page-header { background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+        .page-header h1 { font-size: 24px; margin-bottom: 10px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 20px; }
+        .card h3 { color: #333; margin-bottom: 20px; font-size: 18px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .filter-bar { margin-bottom: 20px; }
+        .filter-bar select { padding: 8px 15px; border: 1px solid #ddd; border-radius: 6px; }
+        .doctor-item { padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 15px; }
+        .doctor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .doctor-name { font-weight: 600; font-size: 16px; color: #333; }
+        .doctor-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-approved { background: #d4edda; color: #155724; }
+        .status-rejected { background: #f8d7da; color: #721c24; }
+        .doctor-info { color: #666; font-size: 14px; line-height: 1.6; }
+        .doctor-info p { margin: 3px 0; }
+        .doctor-actions { margin-top: 15px; }
+        .btn { background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; margin-right: 10px; }
+        .btn-success { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+        .btn-danger { background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #fc4a1a; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span style="font-size: 28px;">⚙️</span>
+            <span>MediCare AI 管理员控制台</span>
+        </div>
+        <div class="nav-menu">
+            <a href="/admin-dashboard.html">系统概览</a>
+            <a href="/admin-ai-models.html">AI模型配置</a>
+            <a href="/admin-knowledge-base.html">知识库管理</a>
+            <a href="/admin-doctors.html" class="active">医生认证</a>
+            <a href="/admin-logs.html">系统日志</a>
+        </div>
+        <div class="nav-user">
+            <button onclick="logout()">退出</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="page-header">
+            <h1>👨‍⚕️ 医生认证管理</h1>
+            <p>审核医生资质认证申请</p>
+        </div>
+
+        <div class="card">
+            <h3>认证申请列表</h3>
+            <div class="filter-bar">
+                <select id="statusFilter" onchange="loadDoctors()">
+                    <option value="">全部状态</option>
+                    <option value="pending">待审核</option>
+                    <option value="approved">已通过</option>
+                    <option value="rejected">已拒绝</option>
+                </select>
+            </div>
+            <div id="doctorsList">
+                <div class="loading"><span class="spinner"></span> 加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/admin-login.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/admin-login.html';
+        }
+
+        async function loadDoctors() {
+            const container = document.getElementById('doctorsList');
+            const status = document.getElementById('statusFilter').value;
+            
+            try {
+                let url = `${API_BASE}/api/v1/admin/doctors/verifications`;
+                if (status) url += `?status=${status}`;
+                
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    renderDoctors(data.verifications || []);
+                } else {
+                    throw new Error('加载失败');
+                }
+            } catch (error) {
+                container.innerHTML = `<p style="color: #999; text-align: center;">加载失败: ${error.message}</p>`;
+            }
+        }
+
+        function renderDoctors(doctors) {
+            const container = document.getElementById('doctorsList');
+            if (!doctors || doctors.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center;">暂无认证申请</p>';
+                return;
+            }
+            
+            const statusLabels = {
+                'pending': '待审核',
+                'approved': '已通过',
+                'rejected': '已拒绝'
+            };
+            
+            container.innerHTML = doctors.map(doc => `
+                <div class="doctor-item">
+                    <div class="doctor-header">
+                        <span class="doctor-name">${doc.full_name || '未知'}</span>
+                        <span class="doctor-status status-${doc.status || 'pending'}">${statusLabels[doc.status] || '待审核'}</span>
+                    </div>
+                    <div class="doctor-info">
+                        <p><strong>邮箱:</strong> ${doc.email || '-'}</p>
+                        <p><strong>医院:</strong> ${doc.hospital || '-'} | <strong>科室:</strong> ${doc.department || '-'}</p>
+                        <p><strong>职称:</strong> ${doc.title || '-'} | <strong>专业:</strong> ${doc.specialty || '-'}</p>
+                        <p><strong>执业证号:</strong> ${doc.license_number || '-'}</p>
+                    </div>
+                    ${doc.status === 'pending' ? `
+                    <div class="doctor-actions">
+                        <button class="btn btn-success" onclick="approveDoctor('${doc.id}')">通过</button>
+                        <button class="btn btn-danger" onclick="rejectDoctor('${doc.id}')">拒绝</button>
+                    </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function approveDoctor(id) {
+            if (!confirm('确定要通过该医生的认证申请吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/doctors/verifications/${id}/approve`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                
+                if (response.ok) {
+                    alert('已通过');
+                    loadDoctors();
+                } else {
+                    throw new Error('操作失败');
+                }
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+
+        async function rejectDoctor(id) {
+            if (!confirm('确定要拒绝该医生的认证申请吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/doctors/verifications/${id}/reject`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                
+                if (response.ok) {
+                    alert('已拒绝');
+                    loadDoctors();
+                } else {
+                    throw new Error('操作失败');
+                }
+            } catch (error) {
+                alert('操作失败: ' + error.message);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) return;
+            loadDoctors();
+        });
+    </script>
+</body>
+</html>

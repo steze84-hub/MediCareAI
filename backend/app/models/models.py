@@ -1,38 +1,32 @@
 """
-Database Models - MediCare_AI | 数据库模型 - MediCare_AI
-SQLAlchemy ORM Models for Intelligent Disease Management System | 智能疾病管理系统的 SQLAlchemy ORM 模型
-
-This module defines all database tables and their relationships using SQLAlchemy ORM.
-The models follow these design principles:
-- UUID primary keys for security and distribution
-- Proper indexing for query performance
-- Relationship cascade configuration for data integrity
-- Audit fields (created_at, updated_at) on all tables
-
-本模块使用 SQLAlchemy ORM 定义所有数据库表及其关系。
-模型遵循以下设计原则：
-- UUID 主键用于安全性和分布式部署
-- 适当的索引用于查询性能
-- 关系级联配置确保数据完整性
-- 所有表都有审计字段（created_at, updated_at）
+Database Models v2.0 - MediCare_AI | 数据库模型 v2.0
+Enhanced with Patient/Doctor/Admin roles, Data Sharing, Vector RAG, and Privacy Protection
 
 Tables | 表:
-- users: User accounts | 用户账户
-- patients: Patient profiles | 患者档案
+- users: Unified user accounts (patient/doctor/admin) | 统一用户账户
 - diseases: Disease definitions | 疾病定义
 - medical_cases: Medical records | 医疗记录
-- medical_documents: Uploaded files | 上传文件
+- medical_documents: Uploaded files with PII-cleaned content | 上传文件（PII清理后）
 - ai_feedbacks: AI diagnosis results | AI 诊断结果
 - follow_ups: Follow-up schedules | 随访计划
 - user_sessions: Active JWT sessions | 活跃 JWT 会话
 - audit_logs: Security audit trail | 安全审计日志
+- data_sharing_consents: Data sharing agreements | 数据共享同意书
+- shared_medical_cases: Anonymized shared cases | 匿名化分享病例
+- doctor_patient_relations: Doctor-patient relationships | 医生-患者关系
+- knowledge_base_chunks: Vectorized knowledge base | 向量化知识库
+- vector_embedding_configs: Vector model configurations | 向量模型配置
+- system_resource_logs: System monitoring logs | 系统监控日志
 
 Author: MediCare_AI Team
-Version: 1.0.0
+Version: 2.0.0
 """
 
-from sqlalchemy import Column, String, DateTime, Date, Boolean, Text, Integer, DECIMAL, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, JSONB, INET
+from sqlalchemy import (
+    Column, String, DateTime, Date, Boolean, Text, Integer, 
+    DECIMAL, ForeignKey, Enum, Float, Index, UniqueConstraint
+)
+from sqlalchemy.dialects.postgresql import UUID, JSONB, INET, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
@@ -42,22 +36,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 # =============================================================================
-# User Model | 用户模型
+# Unified User Model | 统一用户模型
 # =============================================================================
 class User(Base):
     """
-    User Model - Core authentication entity | 用户模型 - 核心认证实体
+    Unified User Model - Patient/Doctor/Admin | 统一用户模型 - 患者/医生/管理员
     
-    Stores user account information including authentication credentials.
-    Each user can have one patient profile and multiple sessions.
+    Merges users and patients tables from v1.0.
+    Uses role-based field access to support three user types in one table.
     
-    存储用户账户信息，包括认证凭据。
-    每个用户可以有一个患者档案和多个会话。
+    合并v1.0的users和patients表。
+    使用基于角色的字段访问，在一个表中支持三种用户类型。
     
-    Relationships | 关系:
-    - patients: One-to-one with Patient / 与 Patient 一对一
-    - user_sessions: One-to-many with UserSession / 与 UserSession 一对多
-    - audit_logs: One-to-many with AuditLog / 与 AuditLog 一对多
+    Roles | 角色:
+    - patient: 患者 - 提交诊断、查看记录
+    - doctor: 医生 - 查看分享病例、科研数据
+    - admin: 管理员 - 系统监控、模型配置
     """
     __tablename__ = "users"
     
@@ -67,13 +61,20 @@ class User(Base):
     
     # Authentication Fields | 认证字段
     email = Column(String(255), unique=True, nullable=False, index=True,
-                   comment="User email address (unique) / 用户邮箱地址（唯一）")
+                   comment="User email address / 用户邮箱地址")
     password_hash = Column(String(255), nullable=False,
                           comment="Bcrypt hashed password / Bcrypt 哈希密码")
     
-    # Profile Fields | 个人资料字段
+    # Role Field (Critical Design) | 角色字段（关键设计）
+    role = Column(Enum('patient', 'doctor', 'admin', name='user_role'), 
+                  nullable=False, default='patient',
+                  comment="User role: patient/doctor/admin / 用户角色")
+    
+    # Common Profile Fields | 通用个人资料字段
     full_name = Column(String(255), nullable=False,
-                      comment="User's full name / 用户全名")
+                      comment="Full name / 全名")
+    phone = Column(String(20), nullable=True,
+                  comment="Contact phone / 联系电话")
     
     # Status Fields | 状态字段
     is_active = Column(Boolean, default=True,
@@ -81,133 +82,179 @@ class User(Base):
     is_verified = Column(Boolean, default=False,
                         comment="Email verification status / 邮箱验证状态")
     
+    # =============================================================================
+    # Patient-Specific Fields (nullable for doctors/admins) | 患者特有字段
+    # =============================================================================
+    date_of_birth = Column(Date, nullable=True,
+                          comment="[Patient] Date of birth / [患者] 出生日期")
+    gender = Column(String(10), nullable=True,
+                   comment="[Patient] Gender / [患者] 性别")
+    address = Column(Text, nullable=True,
+                    comment="[Patient] Address (city/environment info) / [患者] 地址（城市/环境信息）")
+    emergency_contact = Column(String(255), nullable=True,
+                              comment="[Patient] Emergency contact / [患者] 紧急联系人")
+    
+    # Anonymized profile for sharing (auto-generated) | 匿名化资料（自动生成）
+    anonymous_profile = Column(JSONB, nullable=True,
+                              comment="Anonymized profile for sharing / 用于分享的匿名化资料")
+    # Format: {"age_range": "30-40", "gender": "female", "city_tier": "tier_1", 
+    #          "city_environment": "urban", "has_family_history": true}
+    
+    # =============================================================================
+    # Doctor-Specific Fields (nullable for patients/admins) | 医生特有字段
+    # =============================================================================
+    title = Column(String(50), nullable=True,
+                  comment="[Doctor] Professional title / [医生] 职称")
+    # e.g., 主任医师, 副主任医师, 主治医师, 住院医师
+    
+    department = Column(String(100), nullable=True,
+                       comment="[Doctor] Department / [医生] 科室")
+    
+    professional_type = Column(String(100), nullable=True,
+                              comment="[Doctor] Professional type/category / [医生] 专业类型")
+    # e.g., 内科, 外科, 儿科, 妇产科, etc.
+    
+    specialty = Column(String(200), nullable=True,
+                      comment="[Doctor] Specialty areas/expertise (comma-separated) / [医生] 专业领域")
+    
+    hospital = Column(String(255), nullable=True,
+                     comment="[Doctor] Hospital/Medical institution / [医生] 医疗机构")
+    
+    license_number = Column(String(100), nullable=True,
+                           comment="[Doctor] Medical license number / [医生] 执业证书号")
+    
+    is_verified_doctor = Column(Boolean, default=False,
+                               comment="[Doctor] License verified / [医生] 资质已认证")
+    
+    # Doctor display info (surname only + hospital + specialty) | 医生展示信息
+    display_name = Column(String(255), nullable=True,
+                         comment="[Doctor] Display name: Surname + Hospital + Specialty / [医生] 展示名称")
+    # e.g., "李医生 | 北京协和医院 | 呼吸内科"
+    
+    # =============================================================================
+    # Admin-Specific Fields (nullable for patients/doctors) | 管理员特有字段
+    # =============================================================================
+    admin_level = Column(Enum('super', 'regular', name='admin_level'), 
+                        nullable=True,
+                        comment="[Admin] Admin level / [管理员] 管理员级别")
+    
+    last_login_at = Column(DateTime(timezone=True), nullable=True,
+                          comment="Last login timestamp / 最后登录时间")
+    
     # Audit Timestamps | 审计时间戳
     created_at = Column(DateTime(timezone=True), server_default=func.now(),
                        comment="Record creation time / 记录创建时间")
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                        comment="Record last update time / 记录最后更新时间")
-    last_login = Column(DateTime(timezone=True),
-                       comment="Last successful login time / 最后成功登录时间")
     
     # Relationships | 关系
-    patients = relationship("Patient", back_populates="user", 
-                           cascade="all, delete-orphan")
+    # Patient relationships
+    medical_cases = relationship("MedicalCase", back_populates="patient",
+                                foreign_keys="MedicalCase.patient_id",
+                                cascade="all, delete-orphan")
+    
+    # Doctor relationships
+    doctor_relations = relationship("DoctorPatientRelation",
+                                   back_populates="doctor",
+                                   foreign_keys="DoctorPatientRelation.doctor_id")
+    patient_relations = relationship("DoctorPatientRelation",
+                                    back_populates="patient",
+                                    foreign_keys="DoctorPatientRelation.patient_id")
+    doctor_verifications = relationship("DoctorVerification",
+                                       back_populates="doctor",
+                                       foreign_keys="DoctorVerification.user_id")
+    doctor_comments = relationship("DoctorCaseComment",
+                                  back_populates="doctor",
+                                  foreign_keys="DoctorCaseComment.doctor_id")
+    patient_replies = relationship("CaseCommentReply",
+                                  back_populates="patient",
+                                  foreign_keys="CaseCommentReply.patient_id")
+
+    # Admin relationships (for logging)
+    admin_operations = relationship("AdminOperationLog", back_populates="admin")
+    
+    # Common relationships
     user_sessions = relationship("UserSession", back_populates="user",
                                 cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user")
+    data_sharing_consents = relationship("DataSharingConsent", back_populates="patient",
+                                        foreign_keys="DataSharingConsent.patient_id",
+                                        cascade="all, delete-orphan")
+    
+    def get_display_info(self):
+        """Get display information based on role / 根据角色获取展示信息"""
+        if self.role == 'doctor':
+            return self.display_name or f"{self.full_name[0]}医生"
+        elif self.role == 'admin':
+            return f"{self.full_name} (管理员)"
+        else:
+            return self.full_name
+    
+    def generate_anonymous_profile(self):
+        """Generate anonymized profile for sharing / 生成匿名化分享资料"""
+        if self.role != 'patient':
+            return None
+        
+        # Calculate age range
+        age_range = None
+        if self.date_of_birth:
+            from datetime import datetime
+            age = datetime.now().year - self.date_of_birth.year
+            if age < 18:
+                age_range = "<18"
+            elif age < 30:
+                age_range = "18-30"
+            elif age < 40:
+                age_range = "30-40"
+            elif age < 50:
+                age_range = "40-50"
+            elif age < 60:
+                age_range = "50-60"
+            else:
+                age_range = "60+"
+        
+        # Extract city tier from address
+        city_tier = "unknown"
+        if self.address:
+            tier1_cities = ["北京", "上海", "广州", "深圳"]
+            tier2_cities = ["杭州", "南京", "成都", "武汉", "西安"]
+            if any(city in self.address for city in tier1_cities):
+                city_tier = "tier_1"
+            elif any(city in self.address for city in tier2_cities):
+                city_tier = "tier_2"
+            else:
+                city_tier = "tier_3_plus"
+        
+        self.anonymous_profile = {
+            "age_range": age_range,
+            "gender": self.gender,
+            "city_tier": city_tier,
+            "city_environment": "urban" if self.address and "市" in self.address else "rural"
+        }
+        return self.anonymous_profile
 
 
 # =============================================================================
 # Disease Model | 疾病模型
 # =============================================================================
 class Disease(Base):
-    """
-    Disease Model - Medical condition definitions | 疾病模型 - 医疗状况定义
-    
-    Stores disease information including medical guidelines in JSON format.
-    Used by the AI diagnosis system to provide evidence-based recommendations.
-    
-    存储疾病信息，包括 JSON 格式的医疗指南。
-    AI 诊断系统使用这些信息提供循证建议。
-    
-    Relationships | 关系:
-    - medical_cases: One-to-many with MedicalCase / 与 MedicalCase 一对多
-    """
+    """Disease Model - Enhanced with vector search support / 疾病模型 - 支持向量检索"""
     __tablename__ = "diseases"
     
-    # Primary Key | 主键
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
-                comment="Unique disease identifier / 唯一疾病标识符")
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), unique=True, nullable=False)
+    code = Column(String(50), unique=True)
+    description = Column(Text)
+    category = Column(String(100), index=True, 
+                     comment="Disease category for grouping / 疾病分类")
+    guidelines_json = Column(JSONB)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Disease Information | 疾病信息
-    name = Column(String(255), unique=True, nullable=False,
-                 comment="Disease name (unique) / 疾病名称（唯一）")
-    code = Column(String(50), unique=True,
-                 comment="Disease code (e.g., ICD-10) / 疾病代码（如 ICD-10）")
-    description = Column(Text,
-                        comment="Detailed disease description / 详细疾病描述")
-    
-    # Guidelines | 指南
-    guidelines_json = Column(JSONB,
-                            comment="Medical guidelines in JSON format / JSON 格式的医疗指南")
-    
-    # Status | 状态
-    is_active = Column(Boolean, default=True,
-                      comment="Disease active status / 疾病激活状态")
-    
-    # Audit Timestamps | 审计时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record creation time / 记录创建时间")
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record last update time / 记录最后更新时间")
-    
-    # Relationships | 关系
+    # Relationships
     medical_cases = relationship("MedicalCase", back_populates="disease")
-
-
-# =============================================================================
-# Patient Model | 患者模型
-# =============================================================================
-class Patient(Base):
-    """
-    Patient Model - Medical profile entity | 患者模型 - 医疗档案实体
-    
-    Stores patient-specific medical information.
-    Note: Patient name is retrieved from User.full_name to avoid data redundancy.
-    The name field here is kept for backward compatibility.
-    
-    存储患者特定的医疗信息。
-    注意：患者名称从 User.full_name 获取以避免数据冗余。
-    此处的 name 字段保留用于向后兼容。
-    
-    Relationships | 关系:
-    - user: Many-to-one with User / 与 User 多对一
-    - medical_cases: One-to-many with MedicalCase / 与 MedicalCase 一对多
-    """
-    __tablename__ = "patients"
-    
-    # Primary Key | 主键
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
-                comment="Unique patient identifier / 唯一患者标识符")
-    
-    # Foreign Keys | 外键
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), 
-                     nullable=False, index=True,
-                     comment="Reference to users.id / 引用 users.id")
-    
-    # Profile Fields | 个人资料字段
-    # Note: name is deprecated, use User.full_name instead / 注意：name 已弃用，请使用 User.full_name
-    name = Column(String(255), nullable=True,
-                 comment="[DEPRECATED] Use User.full_name / [已弃用] 请使用 User.full_name")
-    date_of_birth = Column(Date, nullable=True,
-                          comment="Patient date of birth / 患者出生日期")
-    gender = Column(String(10),
-                   comment="Patient gender (male/female) / 患者性别（男/女）")
-    phone = Column(String(20),
-                  comment="Contact phone number / 联系电话")
-    
-    # Contact Information | 联系信息
-    address = Column(Text,
-                    comment="Residential address / 居住地址")
-    emergency_contact = Column(String(255),
-                              comment="Emergency contact info (name + phone) / 紧急联系人信息（姓名+电话）")
-    
-    # Medical Information | 医疗信息
-    medical_record_number = Column(String(100), unique=True,
-                                  comment="Unique medical record number / 唯一病历号")
-    notes = Column(Text,
-                  comment="Additional medical notes / 额外医疗备注")
-    
-    # Audit Timestamps | 审计时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record creation time / 记录创建时间")
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record last update time / 记录最后更新时间")
-    
-    # Relationships | 关系
-    user = relationship("User", back_populates="patients")
-    medical_cases = relationship("MedicalCase", back_populates="patient",
-                                cascade="all, delete-orphan")
+    knowledge_chunks = relationship("KnowledgeBaseChunk", back_populates="disease")
 
 
 # =============================================================================
@@ -215,123 +262,99 @@ class Patient(Base):
 # =============================================================================
 class MedicalCase(Base):
     """
-    Medical Case Model - Individual medical consultation record | 医疗病例模型 - 单个医疗咨询记录
-    
-    Represents a single medical case or consultation session.
-    Contains symptoms, diagnosis, and related documents.
-    
-    表示单个医疗病例或咨询会话。
-    包含症状、诊断和相关文档。
-    
-    Relationships | 关系:
-    - patient: Many-to-one with Patient / 与 Patient 多对一
-    - disease: Many-to-one with Disease / 与 Disease 多对一
-    - medical_documents: One-to-many with MedicalDocument / 与 MedicalDocument 一对多
-    - ai_feedbacks: One-to-many with AIFeedback / 与 AIFeedback 一对多
-    - follow_ups: One-to-many with FollowUp / 与 FollowUp 一对多
+    Medical Case Model - Enhanced with sharing support / 医疗病例模型 - 支持分享
     """
     __tablename__ = "medical_cases"
     
-    # Primary Key | 主键
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
-                comment="Unique case identifier / 唯一病例标识符")
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     
-    # Foreign Keys | 外键
-    patient_id = Column(UUID(as_uuid=True), ForeignKey("patients.id"),
-                        nullable=False, index=True,
-                        comment="Reference to patients.id / 引用 patients.id")
+    # Foreign Keys
+    patient_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),
+                       nullable=False, index=True)
     disease_id = Column(UUID(as_uuid=True), ForeignKey("diseases.id"),
-                        nullable=False, index=True,
-                        comment="Reference to diseases.id / 引用 diseases.id")
+                       nullable=True, index=True)
     
-    # Case Information | 病例信息
-    title = Column(String(255), nullable=False,
-                  comment="Case title / 病例标题")
-    description = Column(Text,
-                        comment="Detailed case description / 详细病例描述")
-    symptoms = Column(Text,
-                     comment="Reported symptoms / 报告的症状")
-    clinical_findings = Column(JSONB,
-                              comment="Structured clinical findings / 结构化临床发现")
-    diagnosis = Column(Text,
-                      comment="Final diagnosis / 最终诊断")
+    # Case Information
+    title = Column(String(255), nullable=False)
+    description = Column(Text)
+    symptoms = Column(Text)
+    clinical_findings = Column(JSONB)
+    diagnosis = Column(Text)
     
-    # Classification | 分类
-    severity = Column(String(20),
-                     comment="Case severity (low/moderate/high/critical) / 病例严重程度（低/中/高/危急）")
-    status = Column(String(20), default='active',
-                   comment="Case status (active/closed/pending) / 病例状态（活跃/已关闭/待处理）")
+    # Classification
+    severity = Column(String(20))
+    status = Column(String(20), default='active')
     
-    # Audit Timestamps | 审计时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record creation time / 记录创建时间")
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record last update time / 记录最后更新时间")
+    # Sharing Control | 分享控制
+    is_shared = Column(Boolean, default=False,
+                      comment="Whether case is shared / 是否已分享")
+    share_scope = Column(Enum('private', 'to_doctor', 'platform_anonymous', 
+                             name='share_scope'), default='private',
+                        comment="Sharing scope / 分享范围")
     
-    # Relationships | 关系
-    patient = relationship("Patient", back_populates="medical_cases")
+    # Audit Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    patient = relationship("User", back_populates="medical_cases",
+                          foreign_keys=[patient_id])
     disease = relationship("Disease", back_populates="medical_cases")
     medical_documents = relationship("MedicalDocument", back_populates="medical_case",
                                     cascade="all, delete-orphan")
     ai_feedbacks = relationship("AIFeedback", back_populates="medical_case")
     follow_ups = relationship("FollowUp", back_populates="medical_case")
+    shared_version = relationship("SharedMedicalCase", back_populates="original_case",
+                                 uselist=False)
 
 
 # =============================================================================
-# Medical Document Model | 医疗文档模型
+# Medical Document Model with PII Cleaning | 带PII清理的医疗文档模型
 # =============================================================================
 class MedicalDocument(Base):
     """
-    Medical Document Model - File attachments | 医疗文档模型 - 文件附件
-    
-    Stores information about uploaded medical files (PDFs, images, etc.)
-    and their extracted text content via MinerU.
-    
-    存储上传的医疗文件信息（PDF、图片等）及其通过 MinerU 提取的文本内容。
-    
-    Relationships | 关系:
-    - medical_case: Many-to-one with MedicalCase / 与 MedicalCase 多对一
+    Medical Document Model - With PII cleaning / 医疗文档模型 - 带PII清理
     """
     __tablename__ = "medical_documents"
     
-    # Primary Key | 主键
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
-                comment="Unique document identifier / 唯一文档标识符")
-    
-    # Foreign Keys | 外键
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     medical_case_id = Column(UUID(as_uuid=True), ForeignKey("medical_cases.id"),
-                             nullable=False, index=True,
-                             comment="Reference to medical_cases.id / 引用 medical_cases.id")
+                            nullable=False, index=True)
     
-    # File Information | 文件信息
-    filename = Column(String(255), nullable=False,
-                     comment="Stored filename / 存储的文件名")
-    original_filename = Column(String(255), nullable=False,
-                              comment="Original upload filename / 原始上传文件名")
-    file_type = Column(String(50), nullable=False,
-                      comment="MIME type / MIME 类型")
-    file_size = Column(Integer,
-                      comment="File size in bytes / 文件大小（字节）")
-    file_path = Column(String(500),
-                      comment="Storage path / 存储路径")
+    # File Information
+    filename = Column(String(255), nullable=False)
+    original_filename = Column(String(255), nullable=False)
+    file_type = Column(String(50), nullable=False)
+    file_size = Column(Integer)
+    file_path = Column(String(500))
     
-    # Processing Status | 处理状态
-    upload_status = Column(String(20), default='uploaded',
-                          comment="Upload status (uploaded/processing/failed) / 上传状态")
+    # Processing Status
+    upload_status = Column(String(20), default='uploaded')
     
-    # Extracted Content | 提取内容
+    # Original Extracted Content (for patient view) | 原始提取内容（患者查看）
     extracted_content = Column(JSONB,
-                              comment="MinerU extracted content / MinerU 提取的内容")
-    extraction_metadata = Column(JSONB,
-                                comment="Extraction metadata (confidence, etc.) / 提取元数据")
+                              comment="Raw MinerU extracted content / MinerU原始提取内容")
     
-    # Audit Timestamps | 审计时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record creation time / 记录创建时间")
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record last update time / 记录最后更新时间")
+    # PII-Cleaned Content (for sharing) | PII清理后内容（用于分享）
+    cleaned_content = Column(JSONB,
+                            comment="PII-cleaned content for sharing / PII清理后用于分享的内容")
     
-    # Relationships | 关系
+    # PII Cleaning Metadata | PII清理元数据
+    pii_cleaning_status = Column(Enum('pending', 'completed', 'failed', 
+                                     name='pii_status'), default='pending',
+                                comment="PII cleaning status / PII清理状态")
+    pii_detected = Column(JSONB, default=list,
+                         comment="List of detected PII / 检测到的PII列表")
+    cleaning_confidence = Column(Float,
+                                comment="PII cleaning confidence score / PII清理置信度")
+    
+    # Extraction Metadata
+    extraction_metadata = Column(JSONB)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
     medical_case = relationship("MedicalCase", back_populates="medical_documents")
 
 
@@ -339,117 +362,62 @@ class MedicalDocument(Base):
 # AI Feedback Model | AI 反馈模型
 # =============================================================================
 class AIFeedback(Base):
-    """
-    AI Feedback Model - AI diagnosis results | AI 反馈模型 - AI 诊断结果
-    
-    Stores AI-generated diagnosis results including confidence scores
-    and recommendations. Linked to medical cases for tracking.
-    
-    存储 AI 生成的诊断结果，包括置信度分数和建议。
-    与医疗病例关联以便追踪。
-    
-    Relationships | 关系:
-    - medical_case: Many-to-one with MedicalCase / 与 MedicalCase 多对一
-    """
+    """AI Feedback Model - Enhanced with knowledge source tracking / AI反馈模型"""
     __tablename__ = "ai_feedbacks"
     
-    # Primary Key | 主键
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
-                comment="Unique feedback identifier / 唯一反馈标识符")
-    
-    # Foreign Keys | 外键
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     medical_case_id = Column(UUID(as_uuid=True), ForeignKey("medical_cases.id"),
-                             nullable=False, index=True,
-                             comment="Reference to medical_cases.id / 引用 medical_cases.id")
+                            nullable=False, index=True)
     
-    # AI Input/Output | AI 输入/输出
-    feedback_type = Column(String(50), nullable=False,
-                          comment="Type of AI feedback / AI 反馈类型")
-    input_data = Column(JSONB, nullable=False,
-                       comment="Input data sent to AI / 发送给 AI 的输入数据")
-    ai_response = Column(JSONB, nullable=False,
-                        comment="Raw AI response / 原始 AI 响应")
+    feedback_type = Column(String(50), nullable=False)
+    input_data = Column(JSONB, nullable=False)
+    ai_response = Column(JSONB, nullable=False)
     
-    # Analysis | 分析
-    confidence_score = Column(DECIMAL(3, 2),
-                             comment="AI confidence score (0.00-1.00) / AI 置信度分数")
-    recommendations = Column(Text,
-                            comment="AI-generated recommendations / AI 生成的建议")
-    follow_up_plan = Column(JSONB,
-                           comment="Structured follow-up plan / 结构化随访计划")
+    # Knowledge Base Sources | 知识库来源
+    knowledge_sources = Column(JSONB, default=list,
+                              comment="Knowledge base chunks used / 使用的知识库块")
     
-    # Review Status | 审核状态
-    is_reviewed = Column(Boolean, default=False,
-                        comment="Whether reviewed by doctor / 是否已由医生审核")
-    reviewed_by = Column(UUID(as_uuid=True),
-                        comment="Doctor who reviewed / 审核医生的 ID")
-    review_notes = Column(Text,
-                         comment="Doctor review notes / 医生审核备注")
+    confidence_score = Column(DECIMAL(3, 2))
+    recommendations = Column(Text)
+    follow_up_plan = Column(JSONB)
     
-    # Audit Timestamps | 审计时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record creation time / 记录创建时间")
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record last update time / 记录最后更新时间")
+    # Review Status
+    is_reviewed = Column(Boolean, default=False)
+    reviewed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    review_notes = Column(Text)
     
-    # Relationships | 关系
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
     medical_case = relationship("MedicalCase", back_populates="ai_feedbacks")
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
 
 
 # =============================================================================
 # Follow-Up Model | 随访模型
 # =============================================================================
 class FollowUp(Base):
-    """
-    Follow-Up Model - Patient follow-up appointments | 随访模型 - 患者随访预约
-    
-    Tracks scheduled and completed follow-up appointments for patients.
-    
-    追踪患者的已预约和已完成的随访。
-    
-    Relationships | 关系:
-    - medical_case: Many-to-one with MedicalCase / 与 MedicalCase 多对一
-    """
+    """Follow-Up Model / 随访模型"""
     __tablename__ = "follow_ups"
     
-    # Primary Key | 主键
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
-                comment="Unique follow-up identifier / 唯一随访标识符")
-    
-    # Foreign Keys | 外键
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     medical_case_id = Column(UUID(as_uuid=True), ForeignKey("medical_cases.id"),
-                             nullable=False, index=True,
-                             comment="Reference to medical_cases.id / 引用 medical_cases.id")
+                            nullable=False, index=True)
     
-    # Schedule Information | 计划信息
-    scheduled_date = Column(String(10), nullable=False,
-                           comment="Scheduled date (YYYY-MM-DD) / 计划日期")
-    actual_date = Column(String(10),
-                        comment="Actual visit date (YYYY-MM-DD) / 实际就诊日期")
-    follow_up_type = Column(String(50), nullable=False,
-                           comment="Type of follow-up / 随访类型")
+    scheduled_date = Column(String(10), nullable=False)
+    actual_date = Column(String(10))
+    follow_up_type = Column(String(50), nullable=False)
+    status = Column(String(20), default='scheduled')
     
-    # Status | 状态
-    status = Column(String(20), default='scheduled',
-                   comment="Status (scheduled/completed/cancelled) / 状态")
+    notes = Column(Text)
+    symptoms_changes = Column(Text)
+    medication_adherence = Column(String(20))
+    next_follow_up_date = Column(String(10))
     
-    # Visit Details | 就诊详情
-    notes = Column(Text,
-                  comment="Follow-up notes / 随访备注")
-    symptoms_changes = Column(Text,
-                             comment="Changes in symptoms / 症状变化")
-    medication_adherence = Column(String(20),
-                                 comment="Medication adherence level / 用药依从性水平")
-    next_follow_up_date = Column(String(10),
-                                comment="Next scheduled follow-up / 下次计划随访")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Audit Timestamps | 审计时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record creation time / 记录创建时间")
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Record last update time / 记录最后更新时间")
-    
-    # Relationships | 关系
     medical_case = relationship("MedicalCase", back_populates="follow_ups")
 
 
@@ -457,43 +425,25 @@ class FollowUp(Base):
 # User Session Model | 用户会话模型
 # =============================================================================
 class UserSession(Base):
-    """
-    User Session Model - JWT session tracking | 用户会话模型 - JWT 会话追踪
-    
-    Tracks active JWT sessions for users. Used for logout functionality
-    and session management.
-    
-    追踪用户的活跃 JWT 会话。用于登出功能和会话管理。
-    
-    Relationships | 关系:
-    - user: Many-to-one with User / 与 User 多对一
-    """
+    """User Session Model - Enhanced with role tracking / 用户会话模型"""
     __tablename__ = "user_sessions"
     
-    # Primary Key | 主键
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
-                comment="Unique session identifier / 唯一会话标识符")
-    
-    # Foreign Keys | 外键
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),
-                     nullable=False, index=True,
-                     comment="Reference to users.id / 引用 users.id")
+                    nullable=False, index=True)
     
-    # Session Information | 会话信息
-    token_id = Column(String(255), nullable=False, index=True,
-                     comment="JWT token identifier / JWT 令牌标识符")
-    expires_at = Column(DateTime(timezone=True), nullable=False,
-                       comment="Session expiration time / 会话过期时间")
+    token_id = Column(String(255), nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_active = Column(Boolean, default=True)
     
-    # Status | 状态
-    is_active = Column(Boolean, default=True,
-                      comment="Session active status / 会话激活状态")
+    # Session metadata
+    login_role = Column(String(20),
+                       comment="Role at login (for role switching) / 登录时的角色")
+    ip_address = Column(INET)
+    user_agent = Column(Text)
     
-    # Audit Timestamp | 审计时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now(),
-                       comment="Session creation time / 会话创建时间")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Relationships | 关系
     user = relationship("User", back_populates="user_sessions")
 
 
@@ -501,48 +451,636 @@ class UserSession(Base):
 # Audit Log Model | 审计日志模型
 # =============================================================================
 class AuditLog(Base):
-    """
-    Audit Log Model - Security audit trail | 审计日志模型 - 安全审计日志
-    
-    Records all significant user actions for security and compliance.
-    Tracks who did what, when, and from where.
-    
-    记录所有重要用户操作，用于安全和合规性。
-    追踪谁在何时何地做了什么。
-    
-    Relationships | 关系:
-    - user: Many-to-one with User (nullable) / 与 User 多对一（可空）
-    """
+    """Audit Log Model / 审计日志模型"""
     __tablename__ = "audit_logs"
     
-    # Primary Key | 主键
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
-                comment="Unique log entry identifier / 唯一日志条目标识符")
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
     
-    # Foreign Keys | 外键
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True,
-                    comment="Reference to users.id (nullable) / 引用 users.id（可空）")
+    action = Column(String(100), nullable=False)
+    resource_type = Column(String(50))
+    resource_id = Column(UUID(as_uuid=True))
+    details = Column(JSONB)
     
-    # Action Information | 操作信息
-    action = Column(String(100), nullable=False,
-                   comment="Action performed / 执行的操作")
-    resource_type = Column(String(50),
-                          comment="Type of resource affected / 受影响的资源类型")
-    resource_id = Column(UUID(as_uuid=True),
-                        comment="ID of affected resource / 受影响资源的 ID")
-    details = Column(JSONB,
-                    comment="Additional details in JSON / JSON 格式的额外详情")
+    ip_address = Column(INET)
+    user_agent = Column(Text)
     
-    # Request Context | 请求上下文
-    ip_address = Column(INET,
-                       comment="Client IP address / 客户端 IP 地址")
-    user_agent = Column(Text,
-                       comment="Client user agent string / 客户端用户代理字符串")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     
-    # Audit Timestamp | 审计时间戳
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), 
-                        index=True,
-                        comment="Log entry time / 日志条目时间")
-    
-    # Relationships | 关系
     user = relationship("User", back_populates="audit_logs")
+
+
+# =============================================================================
+# Data Sharing Consent Model | 数据共享同意书模型
+# =============================================================================
+class DataSharingConsent(Base):
+    """
+    Data Sharing Consent Model - Legal compliance / 数据共享同意书模型 - 法律合规
+    """
+    __tablename__ = "data_sharing_consents"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),
+                       nullable=False, index=True)
+    
+    # Share Type | 分享类型
+    share_type = Column(Enum('to_specific_doctor', 'platform_anonymous', 
+                            'research_project', name='share_type'),
+                       nullable=False,
+                       comment="Type of sharing / 分享类型")
+    
+    # Share Scope | 分享范围
+    target_doctor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),
+                             nullable=True,
+                             comment="Target doctor if specific / 指定医生")
+    disease_category = Column(String(100), nullable=True,
+                             comment="Limit to disease category / 限制疾病分类")
+    
+    # Consent Content | 同意内容
+    consent_version = Column(String(20), nullable=False,
+                            comment="Consent form version / 同意书版本")
+    consent_text = Column(Text, nullable=False,
+                         comment="Full consent text / 完整同意书文本")
+    
+    # Signature Info | 签署信息
+    ip_address = Column(String(45),
+                       comment="IP address when signing / 签署时IP地址")
+    user_agent = Column(Text,
+                       comment="User agent when signing / 签署时浏览器信息")
+    signed_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Validity Period | 有效期
+    valid_from = Column(DateTime(timezone=True), server_default=func.now())
+    valid_until = Column(DateTime(timezone=True), nullable=True,
+                        comment="Expiration date (null = permanent) / 过期日期")
+    is_active = Column(Boolean, default=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True,
+                       comment="When consent was revoked / 撤回时间")
+    
+    # Relationships
+    patient = relationship("User", back_populates="data_sharing_consents",
+                          foreign_keys=[patient_id])
+    target_doctor = relationship("User", foreign_keys=[target_doctor_id])
+
+
+# =============================================================================
+# Shared Medical Case Model (Anonymized) | 匿名化分享病例模型
+# =============================================================================
+class SharedMedicalCase(Base):
+    """
+    Shared Medical Case Model - Anonymized for doctor view / 匿名化分享病例模型
+    """
+    __tablename__ = "shared_medical_cases"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    original_case_id = Column(UUID(as_uuid=True), ForeignKey("medical_cases.id"),
+                             nullable=False, unique=True)
+    consent_id = Column(UUID(as_uuid=True), ForeignKey("data_sharing_consents.id"),
+                       nullable=False)
+    
+    # Anonymized Patient Profile | 匿名化患者资料
+    anonymous_patient_profile = Column(JSONB, nullable=False,
+                                      comment="Anonymized profile / 匿名化资料")
+    
+    # Anonymized Case Content | 匿名化病例内容
+    anonymized_symptoms = Column(Text)
+    anonymized_diagnosis = Column(Text)
+    anonymized_documents = Column(JSONB, default=list)
+    
+    # Visibility Control | 可见性控制
+    visible_to_doctors = Column(Boolean, default=True)
+    visible_for_research = Column(Boolean, default=False)
+    
+    # Access Statistics | 访问统计
+    view_count = Column(Integer, default=0)
+    doctor_views = Column(JSONB, default=list)
+    # Format: [{"doctor_id": "...", "viewed_at": "2026-01-01T10:00:00", "ip": "..."}]
+    
+    # Research Export Control | 科研导出控制
+    exported_count = Column(Integer, default=0)
+    export_records = Column(JSONB, default=list)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    original_case = relationship("MedicalCase", back_populates="shared_version")
+    consent = relationship("DataSharingConsent")
+
+
+# =============================================================================
+# Doctor-Patient Relation Model | 医生-患者关系模型
+# =============================================================================
+class DoctorPatientRelation(Base):
+    """
+    Doctor-Patient Relation Model - Patient initiates @doctor / 医生-患者关系模型
+    """
+    __tablename__ = "doctor_patient_relations"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),
+                       nullable=False, index=True)
+    doctor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),
+                      nullable=False, index=True)
+    
+    # Relationship Status | 关系状态
+    status = Column(Enum('pending', 'active', 'terminated', name='relation_status'),
+                   default='pending',
+                   comment="Relationship status / 关系状态")
+    
+    # Initiation Method | 发起方式
+    initiated_by = Column(Enum('patient_at', 'doctor_request', 'platform_match',
+                              name='initiation_type'),
+                         nullable=False,
+                         comment="How relationship started / 关系发起方式")
+    
+    # Share Scope | 分享范围
+    share_all_cases = Column(Boolean, default=False,
+                            comment="Share all cases / 分享所有病例")
+    shared_case_ids = Column(JSONB, default=list,
+                            comment="Specific shared case IDs / 指定分享的病例ID")
+    
+    # Messages | 消息
+    patient_message = Column(Text,
+                            comment="Message from patient / 患者留言")
+    doctor_response = Column(Text,
+                            comment="Doctor response / 医生回复")
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    activated_at = Column(DateTime(timezone=True), nullable=True)
+    terminated_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Unique constraint: one relation per patient-doctor pair
+    __table_args__ = (
+        UniqueConstraint('patient_id', 'doctor_id', name='uq_patient_doctor'),
+    )
+    
+    # Relationships
+    patient = relationship("User", back_populates="patient_relations",
+                          foreign_keys=[patient_id])
+    doctor = relationship("User", back_populates="doctor_relations",
+                         foreign_keys=[doctor_id])
+
+
+# =============================================================================
+# Doctor Case Comment Model | 医生病例评论模型
+# =============================================================================
+class DoctorCaseComment(Base):
+    """
+    Doctor Case Comment Model - Professional advice on shared cases / 医生病例评论模型
+    
+    Allows verified doctors to add professional comments and suggestions 
+    on anonymized shared medical cases.
+    """
+    __tablename__ = "doctor_case_comments"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Foreign Keys
+    shared_case_id = Column(UUID(as_uuid=True), ForeignKey("shared_medical_cases.id"),
+                           nullable=False, index=True)
+    doctor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),
+                      nullable=False, index=True)
+    
+    # Comment Content | 评论内容
+    comment_type = Column(Enum('suggestion', 'diagnosis_opinion', 'treatment_advice', 
+                              'general', name='comment_type'),
+                         default='general',
+                         comment="Type of comment / 评论类型")
+    
+    content = Column(Text, nullable=False,
+                    comment="Comment content / 评论内容")
+    
+    # Professional Info | 专业信息
+    doctor_specialty = Column(String(200),
+                             comment="Doctor's specialty at time of comment / 评论时医生专业")
+    doctor_hospital = Column(String(255),
+                            comment="Doctor's hospital at time of comment / 评论时医院")
+    
+    # Visibility | 可见性
+    is_public = Column(Boolean, default=True,
+                      comment="Visible to other doctors / 对其他医生可见")
+    
+    # Status | 状态
+    status = Column(Enum('active', 'edited', 'hidden', name='comment_status'),
+                   default='active',
+                   comment="Comment status / 评论状态")
+    
+    # Edit History | 编辑历史
+    edited_at = Column(DateTime(timezone=True), nullable=True)
+    original_content = Column(Text, nullable=True,
+                             comment="Original content before edit / 编辑前的原始内容")
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    shared_case = relationship("SharedMedicalCase")
+    doctor = relationship("User", back_populates="doctor_comments", foreign_keys=[doctor_id])
+    patient_replies = relationship("CaseCommentReply", back_populates="doctor_comment",
+                                   cascade="all, delete-orphan")
+
+
+# =============================================================================
+# Case Comment Reply Model | 病例评论回复模型 (Patient replies to doctor comments)
+# =============================================================================
+class CaseCommentReply(Base):
+    """
+    Case Comment Reply Model - Patient replies to doctor comments
+    Allows patients to respond to specific doctor comments on their cases.
+    Doctors can see replies to their own comments, but not to other doctors' comments.
+    """
+    __tablename__ = "case_comment_replies"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # Foreign Keys
+    doctor_comment_id = Column(UUID(as_uuid=True), ForeignKey("doctor_case_comments.id"),
+                              nullable=False, index=True)
+    patient_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),
+                       nullable=False, index=True)
+    shared_case_id = Column(UUID(as_uuid=True), ForeignKey("shared_medical_cases.id"),
+                           nullable=False, index=True)
+
+    # Reply Content
+    content = Column(Text, nullable=False,
+                    comment="Patient reply content / 患者回复内容")
+
+    # Status
+    status = Column(Enum('active', 'hidden', name='reply_status'),
+                   default='active',
+                   comment="Reply status / 回复状态")
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    doctor_comment = relationship("DoctorCaseComment", back_populates="patient_replies")
+    patient = relationship("User", foreign_keys=[patient_id])
+    shared_case = relationship("SharedMedicalCase")
+
+
+# =============================================================================
+# Case-Knowledge Match Model | 病例-知识匹配模型
+# =============================================================================
+# Vector Embedding Config Model | 向量嵌入配置模型
+# =============================================================================
+class VectorEmbeddingConfig(Base):
+    """
+    Vector Embedding Config Model - Admin managed / 向量嵌入配置模型 - 管理员管理
+    """
+    __tablename__ = "vector_embedding_configs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Basic Info | 基本信息
+    name = Column(String(100), nullable=False,
+                 comment="Configuration name / 配置名称")
+    provider = Column(String(50), nullable=False,
+                     comment="Provider: openai, local, etc. / 提供商")
+    model_id = Column(String(100), nullable=False,
+                     comment="Model ID / 模型ID")
+    
+    # API Configuration | API配置
+    api_url = Column(String(500), nullable=False)
+    api_key = Column(String(500), nullable=False)  # Should be encrypted in production
+    
+    # Parameters | 参数
+    vector_dimension = Column(Integer, default=1536,
+                             comment="Embedding dimension / 嵌入维度")
+    max_input_length = Column(Integer, default=8192,
+                             comment="Max input length / 最大输入长度")
+    
+    # Status | 状态
+    is_active = Column(Boolean, default=False,
+                      comment="Is active config / 是否为活跃配置")
+    is_default = Column(Boolean, default=False,
+                       comment="Is default config / 是否为默认配置")
+    
+    # Test Status | 测试状态
+    last_tested_at = Column(DateTime(timezone=True), nullable=True)
+    test_status = Column(Enum('untested', 'success', 'failed', name='test_status'),
+                        default='untested',
+                        comment="Connection test status / 连接测试状态")
+    test_error_message = Column(Text, nullable=True,
+                               comment="Error message if test failed / 测试失败错误信息")
+    
+    # Audit
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"),
+                       nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# =============================================================================
+# Knowledge Base Chunk Model (Vectorized) | 知识库分块模型（向量化）
+# =============================================================================
+class KnowledgeBaseChunk(Base):
+    """
+    Knowledge Base Chunk Model - Vectorized for RAG / 知识库分块模型 - 向量化
+    """
+    __tablename__ = "knowledge_base_chunks"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Source Info | 来源信息
+    source_document_id = Column(UUID(as_uuid=True), nullable=True)
+    source_type = Column(Enum('disease_guideline', 'medical_document', 
+                             'research_paper', name='source_type'),
+                        nullable=False)
+    
+    # Document Metadata | 文档元数据
+    disease_id = Column(UUID(as_uuid=True), ForeignKey("diseases.id"),
+                       nullable=True, index=True)
+    disease_category = Column(String(100), index=True,
+                             comment="Disease category / 疾病分类")
+    document_title = Column(String(255))
+    section_title = Column(String(255),
+                          comment="Section title / 章节标题")
+    
+    # Chunk Content | 分块内容
+    chunk_index = Column(Integer, nullable=False,
+                        comment="Chunk sequence number / 分块序号")
+    chunk_text = Column(Text, nullable=False,
+                       comment="Original text content / 原始文本内容")
+    chunk_text_hash = Column(String(64), unique=True,
+                            comment="Text hash for deduplication / 文本哈希用于去重")
+    
+    # Vector Embedding (stored as JSONB for flexibility, can use pgvector) | 向量嵌入
+    embedding = Column(JSONB, nullable=True,
+                      comment="Vector embedding / 向量嵌入")
+    embedding_model_id = Column(String(100),
+                               comment="Model used for embedding / 用于嵌入的模型")
+    
+    # Retrieval Statistics | 检索统计
+    retrieval_count = Column(Integer, default=0,
+                            comment="Number of times retrieved / 被检索次数")
+    avg_relevance_score = Column(Float, nullable=True,
+                                comment="Average relevance score / 平均相关度分数")
+    
+    # Status
+    is_active = Column(Boolean, default=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    disease = relationship("Disease", back_populates="knowledge_chunks")
+    
+    # Indexes | 索引
+    __table_args__ = (
+        Index('idx_kb_chunks_category_disease', 'disease_category', 'disease_id'),
+        Index('idx_kb_chunks_active', 'is_active'),
+    )
+
+
+# =============================================================================
+# Case-Knowledge Match Model | 病例-知识匹配模型
+# =============================================================================
+class CaseKnowledgeMatch(Base):
+    """
+    Case-Knowledge Match Model - Smart RAG selection record / 病例-知识匹配记录
+    """
+    __tablename__ = "case_knowledge_matches"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    medical_case_id = Column(UUID(as_uuid=True), ForeignKey("medical_cases.id"),
+                            nullable=False, index=True)
+    
+    # Query Info | 查询信息
+    query_text = Column(Text, nullable=False,
+                       comment="Case summary as query / 病例摘要作为查询")
+    query_embedding = Column(JSONB, nullable=True)
+    
+    # Matched Results | 匹配结果
+    matched_chunks = Column(JSONB, nullable=False,
+                           comment="Top-K matched chunks / Top-K匹配的知识块")
+    # Format: [{"chunk_id": "...", "relevance_score": 0.95, "chunk_text": "..."}]
+    
+    # Used Knowledge Sources | 使用的知识源
+    knowledge_sources = Column(JSONB, default=list,
+                              comment="Disease categories used / 使用的疾病分类")
+    
+    # AI Selection Reasoning | AI选择说明
+    selection_reasoning = Column(Text,
+                                comment="Why these knowledge bases were selected / 选择理由")
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# =============================================================================
+# System Resource Log Model | 系统资源日志模型
+# =============================================================================
+class SystemResourceLog(Base):
+    """
+    System Resource Log Model - Monitoring / 系统资源日志模型 - 监控
+    """
+    __tablename__ = "system_resource_logs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    
+    # Resource Metrics | 资源指标
+    cpu_percent = Column(Float,
+                        comment="CPU usage percentage / CPU使用率")
+    memory_percent = Column(Float,
+                           comment="Memory usage percentage / 内存使用率")
+    disk_percent = Column(Float,
+                         comment="Disk usage percentage / 磁盘使用率")
+    
+    # Container Status | 容器状态
+    container_status = Column(JSONB, default=dict,
+                             comment="Docker container status / Docker容器状态")
+    # Format: {"medicare_backend": {"status": "running", "cpu": 10.5, "memory": 256}}
+    
+    # Database Metrics | 数据库指标
+    db_connections = Column(Integer,
+                           comment="Active DB connections / 活跃数据库连接数")
+    db_query_time_avg = Column(Float,
+                              comment="Average query time / 平均查询时间")
+    
+    # Alert Level | 警告级别
+    alert_level = Column(Enum('info', 'warning', 'critical', name='alert_level'),
+                        default='info',
+                        comment="Alert level / 警告级别")
+    alert_message = Column(Text, nullable=True,
+                          comment="Alert message / 警告信息")
+
+
+# =============================================================================
+# AI Diagnosis Log Model | AI诊断日志模型
+# =============================================================================
+class AIDiagnosisLog(Base):
+    """
+    AI Diagnosis Log Model - For early warning / AI诊断日志模型 - 用于预警
+    """
+    __tablename__ = "ai_diagnosis_logs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    
+    # Request Info | 请求信息
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    request_type = Column(Enum('diagnosis', 'comprehensive_diagnosis', 'document_extraction', 'vector_search',
+                              name='request_type'),
+                         nullable=False)
+    
+    # AI Model Info | AI模型信息
+    ai_model_id = Column(String(100))
+    ai_api_url = Column(String(500))
+    
+    # Performance Metrics | 性能指标
+    request_duration_ms = Column(Integer,
+                                comment="Request duration in ms / 请求耗时毫秒")
+    tokens_input = Column(Integer)
+    tokens_output = Column(Integer)
+    
+    # Result Status | 结果状态
+    status = Column(Enum('success', 'timeout', 'error', 'rate_limited',
+                        name='ai_status'),
+                   nullable=False)
+    error_message = Column(Text, nullable=True)
+    
+    # Anomaly Detection | 异常检测
+    is_anomaly = Column(Boolean, default=False,
+                       comment="Is anomalous (timeout/high error rate) / 是否异常")
+    anomaly_reason = Column(Text, nullable=True,
+                           comment="Anomaly reason / 异常原因")
+
+
+# =============================================================================
+# Admin Operation Log Model | 管理员操作日志模型
+# =============================================================================
+class AdminOperationLog(Base):
+    """
+    Admin Operation Log Model / 管理员操作日志模型
+    """
+    __tablename__ = "admin_operation_logs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    admin_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    
+    operation_type = Column(Enum(
+        'system_config_update',
+        'ai_model_change',
+        'vector_model_test',
+        'knowledge_base_update',
+        'upload_knowledge_document',
+        'upload_knowledge_document_failed',
+        'delete_knowledge_document',
+        'sync_doctor_verification',
+        'doctor_verification',
+        'approve_doctor',
+        'reject_doctor',
+        'approve_doctor_failed',
+        'reject_doctor_failed',
+        'change_password',
+        'data_export',
+        'user_management',
+        name='admin_operation_type'
+    ), nullable=False)
+    
+    operation_details = Column(JSONB, default=dict,
+                              comment="Operation details / 操作详情")
+    ip_address = Column(INET)
+    user_agent = Column(Text)
+    
+    # Relationships
+    admin = relationship("User", back_populates="admin_operations")
+
+
+# =============================================================================
+# Doctor Verification Model | 医生认证模型
+# =============================================================================
+class DoctorVerification(Base):
+    """
+    Doctor Verification Model / 医生认证模型
+
+    Manages doctor verification workflow including license validation
+    and approval process.
+    管理医生认证工作流，包括执照验证和审批流程。
+    """
+    __tablename__ = "doctor_verifications"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),
+                     nullable=False, index=True)
+
+    # License Information / 执照信息
+    license_number = Column(String(100), nullable=False)
+    specialty = Column(String(255))
+    hospital = Column(String(255))
+    years_of_experience = Column(Integer, default=0)
+    education = Column(Text)
+
+    # Verification Status / 认证状态
+    status = Column(Enum('pending', 'approved', 'rejected', name='verification_status'),
+                    default='pending', nullable=False)
+    submitted_at = Column(DateTime(timezone=True), server_default=func.now())
+    verified_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    verification_notes = Column(Text)
+
+    # Relationships
+    doctor = relationship("User", foreign_keys=[user_id],
+                         back_populates="doctor_verifications")
+    verifier = relationship("User", foreign_keys=[verified_by])
+
+
+# =============================================================================
+# Legacy Patient Model (Deprecated) | 遗留患者模型（已弃用）
+# =============================================================================
+class Patient(Base):
+    """
+    [DEPRECATED] Legacy Patient Model / [已弃用] 遗留患者模型
+    
+    This model is kept for backward compatibility during migration.
+    New code should use User model with role='patient'.
+    
+    此模型保留用于迁移期间的向后兼容。
+    新代码应使用 role='patient' 的 User 模型。
+    """
+    __tablename__ = "patients"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), 
+                     nullable=False, index=True)
+    name = Column(String(255), nullable=True)
+    date_of_birth = Column(Date, nullable=True)
+    gender = Column(String(10))
+    phone = Column(String(20))
+    address = Column(Text)
+    emergency_contact = Column(String(255))
+    medical_record_number = Column(String(100), unique=True)
+    notes = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Mark as deprecated in migration script
+    __table_args__ = (
+        {'comment': 'DEPRECATED: Use users table with role=patient'},
+    )
+
+
+# Export all models
+__all__ = [
+    'User',
+    'Disease',
+    'MedicalCase',
+    'MedicalDocument',
+    'AIFeedback',
+    'FollowUp',
+    'UserSession',
+    'AuditLog',
+    'DataSharingConsent',
+    'SharedMedicalCase',
+    'DoctorPatientRelation',
+    'VectorEmbeddingConfig',
+    'KnowledgeBaseChunk',
+    'CaseKnowledgeMatch',
+    'SystemResourceLog',
+    'AIDiagnosisLog',
+    'AdminOperationLog',
+    'DoctorVerification',
+    'DoctorCaseComment',  # 医生病例评论
+    'Patient',  # Deprecated
+]

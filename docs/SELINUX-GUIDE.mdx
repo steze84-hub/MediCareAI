@@ -1,0 +1,307 @@
+{/*
+  SELINUX-GUIDE Documentation
+  
+  中文在前，英文在后 | Chinese first, English second
+*/}
+
+
+## 概述 | Overview
+
+本文档介绍如何在 **不关闭 SELinux** 的情况下，优雅地配置 MediCare_AI 在 Fedora 43 上的 SELinux 策略。  
+This document describes how to gracefully configure SELinux policies for MediCare_AI on Fedora 43 **without disabling SELinux**.
+
+## 核心原则 | Core Principles
+
+✅ **不关闭 SELinux** - 保持 `Enforcing` 模式 / Keep `Enforcing` mode  
+✅ **遵循最小权限原则** - 仅授予必要的权限 / Follow principle of least privilege  
+✅ **使用标准工具** - `semanage`, `restorecon`, `ausearch` / Use standard tools  
+✅ **持久化配置** - 使用 SELinux 策略文件，非临时修改 / Use persistent policy files
+
+---
+
+## 快速配置 | Quick Configuration
+
+### 一键配置脚本 | One-Click Configuration Script
+
+```bash
+sudo bash install-scripts/setup-selinux.sh /opt/medicare-ai
+```
+
+### 手动配置步骤 | Manual Configuration Steps
+
+#### 1. 检查 SELinux 状态 | Check SELinux Status
+
+```bash
+# 查看当前模式 / View current mode
+getenforce
+# 输出 / Output: Enforcing
+
+# 查看详细状态 / View detailed status
+sestatus
+```
+
+#### 2. 安装 container-selinux | Install container-selinux
+
+```bash
+sudo dnf install -y container-selinux
+```
+
+#### 3. 配置文件上下文规则 | Configure File Context Rules
+
+```bash
+# 添加持久化规则 / Add persistent rule
+sudo semanage fcontext -a -t container_file_t '/opt/medicare-ai(/.*)?'
+
+# 应用规则到现有文件 / Apply rule to existing files
+sudo restorecon -Rv /opt/medicare-ai/
+```
+
+#### 4. 验证配置 | Verify Configuration
+
+```bash
+# 检查文件上下文 / Check file context
+ls -laZ /opt/medicare-ai/
+
+# 预期输出 / Expected output:
+# drwxr-xr-x. 12 houge houge unconfined_u:object_r:container_file_t:s0  4096  Feb 3 11:03 .
+```
+
+---
+
+## 配置详解 | Configuration Details
+
+### 文件上下文类型 | File Context Types
+
+| 类型 / Type | 用途 / Purpose | 适用场景 / Use Case |
+|------------|---------------|-------------------|
+| `container_file_t` | 容器文件 / Container files | 被容器访问的宿主机文件 / Host files accessed by containers |
+| `usr_t` | 用户文件 / User files | 普通用户数据文件 / Regular user data files |
+| `default_t` | 默认类型 / Default type | 未分类文件 / Unclassified files |
+
+### 为什么选择 `container_file_t` | Why Choose `container_file_t`
+
+1. **专为容器设计** - Docker 容器可以读取和写入 / Designed for containers - Docker can read and write
+2. **安全隔离** - 与其他系统文件隔离 / Security isolation from other system files
+3. **标准类型** - 被 container-selinux 包支持 / Standard type supported by container-selinux package
+
+---
+
+## Docker 与 SELinux | Docker and SELinux
+
+### Docker 守护进程配置 | Docker Daemon Configuration
+
+Fedora 上的 Docker 默认启用 SELinux 支持，无需额外配置。  
+Docker on Fedora has SELinux support enabled by default, no additional configuration needed.
+
+验证 / Verify:
+```bash
+docker info | grep -i selinux
+# 输出 / Output: Security Options: seccomp, selinux
+```
+
+### 卷挂载的 SELinux 标签 | SELinux Labels for Volume Mounts
+
+Docker 提供两种 SELinux 卷标签 / Docker provides two SELinux volume labels:
+
+| 标签 / Label | 含义 / Meaning | 使用场景 / Use Case |
+|-------------|---------------|-------------------|
+| `:z` | 共享标签 / Shared label | 多个容器共享数据 / Multiple containers share data |
+| `:Z` | 私有标签 / Private label | 单容器独占数据 / Single container exclusive data |
+
+---
+
+## 故障排查 | Troubleshooting
+
+### 检查 SELinux 拒绝日志 | Check SELinux Denial Logs
+
+```bash
+# 查看最近的 SELinux 拒绝 / View recent SELinux denials
+sudo ausearch -m avc -ts recent
+
+# 查看特定时间段的日志 / View logs for specific time period
+sudo ausearch -m avc -ts today
+
+# 查看详细日志 / View detailed logs
+sudo cat /var/log/audit/audit.log | grep denied
+```
+
+### 生成允许规则 | Generate Allow Rules
+
+如果发现有合理的 SELinux 拒绝 / If legitimate SELinux denials are found:
+
+```bash
+# 生成允许模块 / Generate allow module
+sudo ausearch -m avc -ts recent | audit2allow -M mypol
+
+# 安装模块 / Install module
+sudo semodule -i mypol.pp
+```
+
+### 临时调试 | Temporary Debugging
+
+```bash
+# 临时切换到宽容模式（不推荐长期使用）/ Temporarily switch to permissive mode
+sudo setenforce 0
+
+# 测试应用 / Test application
+# ...
+
+# 恢复强制模式 / Restore enforcing mode
+sudo setenforce 1
+```
+
+---
+
+## 最佳实践 | Best Practices
+
+### 1. 目录权限管理 | Directory Permission Management
+
+```bash
+# 项目根目录 / Project root directory
+sudo chown -R houge:houge /opt/medicare-ai
+sudo chmod 755 /opt/medicare-ai
+
+# uploads 目录（容器写入）/ uploads directory (container write)
+sudo chmod 755 /opt/medicare-ai/backend/uploads
+sudo chown houge:houge /opt/medicare-ai/backend/uploads
+
+# 应用 SELinux 上下文 / Apply SELinux context
+sudo restorecon -Rv /opt/medicare-ai/
+```
+
+### 2. 监控 SELinux 日志 | Monitor SELinux Logs
+
+创建日志监控脚本 / Create log monitoring script:
+
+```bash
+#!/bin/bash
+# monitor-selinux.sh
+
+while true; do
+    if sudo ausearch -m avc -ts recent 2>/dev/null | grep -q "denied"; then
+        echo "$(date): 发现 SELinux 拒绝 / SELinux denial found"
+        sudo ausearch -m avc -ts recent | tail -5
+    fi
+    sleep 60
+done
+```
+
+### 3. 定期验证 | Regular Verification
+
+```bash
+#!/bin/bash
+# verify-selinux.sh
+
+echo "=== SELinux 验证 / Verification ==="
+echo ""
+echo "1. SELinux 模式 / Mode: $(getenforce)"
+echo ""
+echo "2. Docker SELinux 支持 / Docker SELinux support:"
+docker info 2>/dev/null | grep -i selinux
+echo ""
+echo "3. 文件上下文检查 / File context check:"
+ls -laZ /opt/medicare-ai/ | head -3
+echo ""
+echo "4. 最近的 SELinux 拒绝 / Recent SELinux denials:"
+sudo ausearch -m avc -ts recent 2>/dev/null | wc -l | xargs echo "拒绝次数 / Denial count:"
+```
+
+---
+
+## Fedora 43 特定说明 | Fedora 43 Specific Notes
+
+### 默认 SELinux 策略 | Default SELinux Policy
+
+Fedora 43 默认启用 `targeted` 策略 / Fedora 43 uses `targeted` policy by default:
+
+```bash
+$ sestatus
+SELinux status:                 enabled
+SELinuxfs mount:                /sys/fs/selinux
+SELinux root directory:         /etc/selinux
+Loaded policy name:             targeted
+Current mode:                   enforcing
+Mode from config file:          enforcing
+```
+
+### 与 Ubuntu 的区别 | Differences from Ubuntu
+
+| 特性 / Feature | Fedora 43 | Ubuntu 24.04 |
+|---------------|-----------|--------------|
+| 默认 SELinux | Enforcing | 无（AppArmor）/ None (AppArmor) |
+| 策略类型 / Policy Type | targeted | 无 / None |
+| container-selinux | 预装或需安装 / Pre-installed or needs install | 需安装 / Needs install |
+
+---
+
+## 验证清单 | Verification Checklist
+
+部署后验证 SELinux 配置 / Verify SELinux configuration after deployment:
+
+- [ ] SELinux 模式为 `Enforcing` / SELinux mode is `Enforcing`
+- [ ] 文件上下文为 `container_file_t` / File context is `container_file_t`
+- [ ] 容器可以读取前端文件 / Containers can read frontend files
+- [ ] 容器可以写入 uploads 目录 / Containers can write to uploads directory
+- [ ] 无 SELinux 拒绝日志 / No SELinux denial logs
+- [ ] 所有服务正常运行 / All services running normally
+
+---
+
+## 命令速查表 | Command Cheat Sheet
+
+```bash
+# 查看 SELinux 状态 / View SELinux status
+getenforce
+sestatus
+
+# 查看文件上下文 / View file context
+ls -laZ /path/to/file
+
+# 修改文件上下文 / Modify file context
+sudo chcon -t container_file_t /path/to/file
+
+# 添加持久化规则 / Add persistent rule
+sudo semanage fcontext -a -t container_file_t '/path(/.*)?'
+
+# 应用上下文规则 / Apply context rules
+sudo restorecon -Rv /path
+
+# 查看 SELinux 日志 / View SELinux logs
+sudo ausearch -m avc -ts recent
+sudo cat /var/log/audit/audit.log | grep denied
+
+# 查看 SELinux 布尔值 / View SELinux booleans
+getsebool -a | grep docker
+
+# 设置 SELinux 布尔值 / Set SELinux boolean
+sudo setsebool -P docker_connect_any on
+```
+
+---
+
+## 参考资源 | Reference Resources
+
+- [SELinux Project Wiki](https://selinuxproject.org)
+- [Fedora SELinux Guide](https://docs.fedoraproject.org/en-US/fedora/latest/system-administrators-guide/selinux/)
+- [Docker SELinux Security](https://docs.docker.com/engine/security/selinux/)
+- [container-selinux GitHub](https://github.com/containers/container-selinux)
+
+---
+
+## 总结 | Summary
+
+通过正确配置 SELinux 文件上下文规则，我们实现了 / By correctly configuring SELinux file context rules, we achieved:
+
+1. ✅ **零妥协安全** - 保持 SELinux Enforcing 模式 / Zero-compromise security
+2. ✅ **容器兼容** - Docker 容器正常访问文件 / Container compatibility
+3. ✅ **持久化配置** - 规则保存在 SELinux 策略中 / Persistent configuration
+4. ✅ **优雅管理** - 使用标准工具，无临时绕过 / Graceful management
+
+**关键命令 / Key Commands**:
+```bash
+sudo semanage fcontext -a -t container_file_t '/opt/medicare-ai(/.*)?'
+sudo restorecon -Rv /opt/medicare-ai/
+```
+
+这样配置后，MediCare_AI 在 Fedora 43 上既安全又功能完整。  
+With this configuration, MediCare_AI is both secure and fully functional on Fedora 43.

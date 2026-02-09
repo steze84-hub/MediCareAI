@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+    <title>MediCare AI - AI模型配置</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f5f7fa; min-height: 100vh; }
+        .navbar { background: white; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); padding: 0 30px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: bold; color: #fc4a1a; }
+        .nav-menu { display: flex; gap: 30px; }
+        .nav-menu a { text-decoration: none; color: #666; font-weight: 500; padding: 5px 10px; border-radius: 5px; transition: all 0.3s; }
+        .nav-menu a:hover, .nav-menu a.active { color: #fc4a1a; background: rgba(252, 74, 26, 0.1); }
+        .nav-user button { background: #f5f5f5; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .main-content { margin-top: 60px; padding: 30px; max-width: 1400px; margin-left: auto; margin-right: auto; }
+        .page-header { background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        .page-header h1 { font-size: 24px; margin-bottom: 10px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); margin-bottom: 20px; }
+        .card h3 { color: #333; margin-bottom: 20px; font-size: 18px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .model-item { padding: 20px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 15px; transition: all 0.3s; }
+        .model-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .model-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .model-name { font-weight: 600; font-size: 16px; color: #333; }
+        .model-status { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-inactive { background: #f8d7da; color: #721c24; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .model-info { color: #666; font-size: 14px; line-height: 1.6; }
+        .model-info p { margin: 5px 0; }
+        .model-actions { display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
+        .btn { background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.3s; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .btn-outline { background: transparent; border: 2px solid #fc4a1a; color: #fc4a1a; }
+        .btn-outline:hover { background: rgba(252, 74, 26, 0.1); }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #fc4a1a; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Modal Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .modal-header { padding: 20px 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { font-size: 20px; color: #333; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+        .modal-close:hover { color: #333; }
+        .modal-body { padding: 25px; }
+        .modal-footer { padding: 20px 25px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
+        
+        /* Form Styles */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #333; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; transition: all 0.3s; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #fc4a1a; box-shadow: 0 0 0 3px rgba(252, 74, 26, 0.1); }
+        .form-group .hint { font-size: 12px; color: #666; margin-top: 5px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        /* Toggle Switch */
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 26px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .toggle-slider { background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%); }
+        input:checked + .toggle-slider:before { transform: translateX(24px); }
+        .toggle-label { margin-left: 10px; font-weight: 500; }
+        
+        /* Test Result */
+        .test-result { padding: 15px; border-radius: 8px; margin-top: 15px; display: none; }
+        .test-result.show { display: block; }
+        .test-result.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .test-result.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .test-result.pending { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        
+        /* Toast Notification */
+        .toast { position: fixed; top: 80px; right: 30px; padding: 15px 25px; border-radius: 8px; color: white; font-weight: 500; z-index: 3000; transform: translateX(400px); transition: transform 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .toast.show { transform: translateX(0); }
+        .toast.success { background: #28a745; }
+        .toast.error { background: #dc3545; }
+        .toast.info { background: #17a2b8; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span style="font-size: 28px;">⚙️</span>
+            <span>MediCare AI 管理员控制台</span>
+        </div>
+        <div class="nav-menu">
+            <a href="/admin-dashboard.html">系统概览</a>
+            <a href="/admin-ai-models.html" class="active">AI模型配置</a>
+            <a href="/admin-knowledge-base.html">知识库管理</a>
+            <a href="/admin-doctors.html">医生认证</a>
+            <a href="/admin-logs.html">系统日志</a>
+        </div>
+        <div class="nav-user">
+            <button onclick="logout()">退出</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="page-header">
+            <div>
+                <h1>🤖 AI模型配置</h1>
+                <p>配置和管理系统中使用的AI模型</p>
+            </div>
+            <button class="btn" onclick="openAddModal()">+ 添加新模型</button>
+        </div>
+
+        <div class="card">
+            <h3>
+                模型列表
+                <button class="btn btn-sm btn-outline" onclick="loadModels()">🔄 刷新</button>
+            </h3>
+            <div id="modelsList">
+                <div class="loading"><span class="spinner"></span> 加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Configuration Modal -->
+    <div class="modal-overlay" id="configModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">配置模型</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="configForm">
+                    <input type="hidden" id="modelType" name="model_type">
+                    
+                    <div class="form-group">
+                        <label>模型类型</label>
+                        <select id="modelTypeSelect" name="model_type_select" required>
+                            <option value="diagnosis">诊断AI模型 (Diagnosis LLM)</option>
+                            <option value="mineru">文档提取 (MinerU)</option>
+                            <option value="embedding">向量嵌入 (Embedding)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>模型ID <span style="color: #fc4a1a;">*</span></label>
+                        <input type="text" id="modelId" name="model_id" placeholder="例如: glm-4-flash" required>
+                        <div class="hint">填写模型的具体标识符</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>API地址 <span style="color: #fc4a1a;">*</span></label>
+                        <input type="url" id="apiUrl" name="api_url" placeholder="例如: https://api.example.com/v1" required>
+                        <div class="hint">模型的API端点地址</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>API密钥 <span style="color: #fc4a1a;">*</span></label>
+                        <input type="password" id="apiKey" name="api_key" placeholder="输入API密钥" required>
+                        <div class="hint">您的API访问密钥，将被加密存储</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center;">
+                            <span class="toggle-switch">
+                                <input type="checkbox" id="enabled" name="enabled" checked>
+                                <span class="toggle-slider"></span>
+                            </span>
+                            <span class="toggle-label">启用此模型</span>
+                        </label>
+                    </div>
+
+                    <div class="test-result" id="testResult">
+                        <strong>测试结果:</strong>
+                        <div id="testResultContent"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-success" onclick="testModelConnection()">🔌 测试连通性</button>
+                <button class="btn" onclick="saveModelConfig()">💾 保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '';
+        let currentModels = {};
+        
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/admin-login.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/admin-login.html';
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        async function loadModels() {
+            const container = document.getElementById('modelsList');
+            container.innerHTML = '<div class="loading"><span class="spinner"></span> 加载中...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/ai-models`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentModels = {
+                        diagnosis: data.diagnosis_llm,
+                        mineru: data.mineru,
+                        embedding: data.embedding
+                    };
+                    renderModels(currentModels);
+                } else {
+                    throw new Error('加载失败');
+                }
+            } catch (error) {
+                container.innerHTML = `<p style="color: #999; text-align: center;">加载失败: ${error.message}</p>`;
+                showToast('加载模型列表失败', 'error');
+            }
+        }
+
+        function renderModels(models) {
+            const container = document.getElementById('modelsList');
+            const modelTypes = [
+                { key: 'diagnosis', name: '诊断AI模型', icon: '🤖' },
+                { key: 'mineru', name: '文档提取 (MinerU)', icon: '📄' },
+                { key: 'embedding', name: '向量嵌入模型', icon: '📊' }
+            ];
+            
+            let html = '';
+            modelTypes.forEach(type => {
+                const model = models[type.key];
+                if (!model) return;
+                
+                const statusClass = model.enabled 
+                    ? (model.test_status === 'success' ? 'status-active' : 'status-pending')
+                    : 'status-inactive';
+                const statusText = model.enabled 
+                    ? (model.test_status === 'success' ? '已启用' : '待测试')
+                    : '未启用';
+                
+                html += `
+                    <div class="model-item">
+                        <div class="model-header">
+                            <span class="model-name">${type.icon} ${type.name}</span>
+                            <span class="model-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="model-info">
+                            <p><strong>模型ID:</strong> ${model.model_id || '<span style="color: #999;">未配置</span>'}</p>
+                            <p><strong>API地址:</strong> ${model.api_url || '<span style="color: #999;">未配置</span>'}</p>
+                            <p><strong>连接状态:</strong> 
+                                ${model.test_status === 'success' 
+                                    ? `<span style="color: #28a745;">✓ 正常 (${model.latency_ms ? model.latency_ms + 'ms' : ''})</span>` 
+                                    : model.test_status === 'failed'
+                                    ? `<span style="color: #dc3545;">✗ 失败${model.error_message ? ': ' + model.error_message : ''}</span>`
+                                    : '<span style="color: #999;">未测试</span>'
+                                }
+                            </p>
+                            <p><strong>最后测试:</strong> ${model.last_tested ? new Date(model.last_tested).toLocaleString('zh-CN') : '从未'}</p>
+                        </div>
+                        <div class="model-actions">
+                            <button class="btn btn-sm btn-outline" onclick="openEditModal('${type.key}')">⚙️ 配置</button>
+                            <button class="btn btn-sm btn-success" onclick="quickTestModel('${type.key}')">🔌 测试连通性</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html || '<p style="color: #999; text-align: center;">暂无模型配置</p>';
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = '添加新模型';
+            document.getElementById('configForm').reset();
+            document.getElementById('modelType').value = '';
+            document.getElementById('modelTypeSelect').disabled = false;
+            document.getElementById('testResult').classList.remove('show');
+            document.getElementById('configModal').classList.add('show');
+        }
+
+        function openEditModal(modelType) {
+            const model = currentModels[modelType];
+            if (!model) return;
+            
+            document.getElementById('modalTitle').textContent = '配置模型';
+            document.getElementById('modelType').value = modelType;
+            document.getElementById('modelTypeSelect').value = modelType;
+            document.getElementById('modelTypeSelect').disabled = true;
+            document.getElementById('modelId').value = model.model_id || '';
+            document.getElementById('apiUrl').value = model.api_url || '';
+            document.getElementById('apiKey').value = '';
+            document.getElementById('enabled').checked = model.enabled;
+            document.getElementById('testResult').classList.remove('show');
+            document.getElementById('configModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('configModal').classList.remove('show');
+        }
+
+        async function testModelConnection() {
+            const modelType = document.getElementById('modelType').value || document.getElementById('modelTypeSelect').value;
+            const apiUrl = document.getElementById('apiUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const modelId = document.getElementById('modelId').value;
+            
+            if (!apiUrl || !apiKey) {
+                showToast('请填写API地址和API密钥', 'error');
+                return;
+            }
+            
+            const testResult = document.getElementById('testResult');
+            const testContent = document.getElementById('testResultContent');
+            
+            testResult.className = 'test-result pending show';
+            testContent.innerHTML = '<span class="spinner"></span> 正在测试连接...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/ai-models/${modelType}/test`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        api_url: apiUrl,
+                        api_key: apiKey,
+                        model_id: modelId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    testResult.className = 'test-result success show';
+                    testContent.innerHTML = `
+                        <div>✓ 连接成功</div>
+                        <div>延迟: ${result.latency_ms}ms</div>
+                        ${result.response_summary ? `<div>响应: ${result.response_summary}</div>` : ''}
+                    `;
+                    showToast('连接测试成功', 'success');
+                } else {
+                    testResult.className = 'test-result error show';
+                    testContent.innerHTML = `
+                        <div>✗ 连接失败</div>
+                        <div>${result.error_message || '未知错误'}</div>
+                    `;
+                    showToast('连接测试失败', 'error');
+                }
+            } catch (error) {
+                testResult.className = 'test-result error show';
+                testContent.innerHTML = `<div>✗ 测试出错: ${error.message}</div>`;
+                showToast('测试过程出错', 'error');
+            }
+        }
+
+        async function saveModelConfig() {
+            const modelType = document.getElementById('modelType').value || document.getElementById('modelTypeSelect').value;
+            const apiUrl = document.getElementById('apiUrl').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const modelId = document.getElementById('modelId').value;
+            const enabled = document.getElementById('enabled').checked;
+            
+            if (!apiUrl || !apiKey || !modelId) {
+                showToast('请填写所有必填项', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/ai-models/${modelType}/config`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        api_url: apiUrl,
+                        api_key: apiKey,
+                        model_id: modelId,
+                        enabled: enabled
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showToast(result.message || '配置保存成功', 'success');
+                    closeModal();
+                    loadModels();
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || '保存失败', 'error');
+                }
+            } catch (error) {
+                showToast('保存配置时出错', 'error');
+            }
+        }
+
+        async function quickTestModel(modelType) {
+            const model = currentModels[modelType];
+            if (!model || !model.api_url) {
+                showToast('该模型尚未配置', 'error');
+                return;
+            }
+            
+            showToast('正在测试连接...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/admin/ai-models/${modelType}/test`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(`✓ ${modelType} 连接成功 (${result.latency_ms}ms)`, 'success');
+                } else {
+                    showToast(`✗ ${modelType} 连接失败: ${result.error_message}`, 'error');
+                }
+                
+                loadModels();
+            } catch (error) {
+                showToast('测试过程出错', 'error');
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('configModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) return;
+            loadModels();
+        });
+    </script>
+</body>
+</html>

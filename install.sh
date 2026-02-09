@@ -3,8 +3,8 @@
 # MediCare_AI One-Click Deployment Script
 # Supported Distributions: Ubuntu 24.04, Fedora 43, openSUSE Leap 16.0,
 #            openSUSE Tumbleweed, AOSC OS 13.0.7, openEuler 24.03, Deepin 25
-# Version: 1.1.0
-# Date: 2026-02-04
+# Version: 2.0.0
+# Date: 2026-02-09
 #==============================================================================
 
 set -o pipefail
@@ -26,7 +26,7 @@ readonly NC='\033[0m'
 #==============================================================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_NAME="MediCare_AI"
-PROJECT_VERSION="v1.0.2"
+PROJECT_VERSION="v2.0.0"
 
 # Language Setting
 CURRENT_LANG="auto"
@@ -59,6 +59,17 @@ POSTGRES_PORT=5432
 REDIS_PORT=6379
 DATA_PERSISTENCE=true
 USE_CN_MIRROR=false
+
+# Alibaba Cloud OSS Configuration
+OSS_ACCESS_KEY_ID=""
+OSS_ACCESS_KEY_SECRET=""
+OSS_BUCKET_NAME=""
+OSS_ENDPOINT=""
+
+# Qwen API Configuration (for vector embeddings)
+QWEN_API_KEY=""
+QWEN_API_URL=""
+QWEN_EMBEDDING_MODEL=""
 
 # Log File
 LOG_FILE="/tmp/medicare_ai_deploy_$(date +%Y%m%d_%H%M%S).log"
@@ -153,6 +164,21 @@ init_i18n_zh() {
     I18N[zh_api_mineru_token]="MinerU API 令牌 [回车跳过]"
     I18N[zh_api_skip_mineru]="跳过 MinerU 配置，请在部署完成后手动编辑 .env 文件"
     I18N[zh_api_jwt_generated]="已生成 JWT 密钥"
+    
+    I18N[zh_oss_config]="阿里云 OSS 配置（可选，可跳过）"
+    I18N[zh_oss_description]="配置阿里云对象存储用于患者文档安全存储"
+    I18N[zh_oss_access_key_id]="OSS Access Key ID"
+    I18N[zh_oss_access_key_secret]="OSS Access Key Secret"
+    I18N[zh_oss_bucket_name]="OSS Bucket 名称"
+    I18N[zh_oss_endpoint]="OSS Endpoint（如 oss-cn-beijing.aliyuncs.com）"
+    I18N[zh_oss_skip_warning]="跳过 OSS 配置，患者文档将存储在本地（不推荐生产环境）"
+    
+    I18N[zh_qwen_config]="通义千问 API 配置（可选，可跳过）"
+    I18N[zh_qwen_description]="配置 Qwen API 用于知识库向量化和 RAG 检索"
+    I18N[zh_qwen_api_key]="Qwen API 密钥"
+    I18N[zh_qwen_api_url]="Qwen API 地址 [回车跳过]"
+    I18N[zh_qwen_embedding_model]="Embedding 模型 ID [默认 text-embedding-v1]"
+    I18N[zh_qwen_skip_warning]="跳过 Qwen 配置，知识库功能将不可用"
     
     I18N[zh_network_config]="网络配置"
     I18N[zh_network_type]="部署类型选择"
@@ -367,7 +393,22 @@ init_i18n_en() {
     I18N[en_api_mineru_token]="MinerU API Token [Enter to skip]"
     I18N[en_api_skip_mineru]="Skipped MinerU config. Please edit .env file after deployment"
     I18N[en_api_jwt_generated]="JWT key generated"
-    
+
+    I18N[en_oss_config]="Alibaba Cloud OSS Configuration (Optional)"
+    I18N[en_oss_description]="Configure Alibaba Cloud OSS for secure patient document storage"
+    I18N[en_oss_access_key_id]="OSS Access Key ID"
+    I18N[en_oss_access_key_secret]="OSS Access Key Secret"
+    I18N[en_oss_bucket_name]="OSS Bucket Name"
+    I18N[en_oss_endpoint]="OSS Endpoint (e.g., oss-cn-beijing.aliyuncs.com)"
+    I18N[en_oss_skip_warning]="Skipped OSS config. Documents will be stored locally (not recommended for production)"
+
+    I18N[en_qwen_config]="Qwen API Configuration (Optional)"
+    I18N[en_qwen_description]="Configure Qwen API for knowledge base vectorization and RAG retrieval"
+    I18N[en_qwen_api_key]="Qwen API Key"
+    I18N[en_qwen_api_url]="Qwen API URL [Press Enter to skip]"
+    I18N[en_qwen_embedding_model]="Embedding Model ID [Default: text-embedding-v1]"
+    I18N[en_qwen_skip_warning]="Skipped Qwen config. Knowledge base features will be unavailable"
+
     I18N[en_network_config]="Network Configuration"
     I18N[en_network_type]="Select Deployment Type"
     I18N[en_network_domain]="1. Domain    - Use your domain (requires DNS configuration)"
@@ -904,6 +945,37 @@ EOF
     
     JWT_SECRET_KEY=$(generate_jwt_secret)
     log_info "$(_ api_jwt_generated)"
+
+    echo
+
+    # OSS Configuration
+    echo -e "${CYAN}$(_ oss_config)${NC}"
+    echo -e "${YELLOW}$(_ oss_description)${NC}"
+    read -p "  $(_ oss_access_key_id): " OSS_ACCESS_KEY_ID
+
+    if [[ -n "$OSS_ACCESS_KEY_ID" ]]; then
+        read -p "  $(_ oss_access_key_secret): " OSS_ACCESS_KEY_SECRET
+        read -p "  $(_ oss_bucket_name): " OSS_BUCKET_NAME
+        read -p "  $(_ oss_endpoint): " OSS_ENDPOINT
+    else
+        log_warning "$(_ oss_skip_warning)"
+    fi
+
+    echo
+
+    # Qwen Configuration
+    echo -e "${CYAN}$(_ qwen_config)${NC}"
+    echo -e "${YELLOW}$(_ qwen_description)${NC}"
+    read -p "  $(_ qwen_api_url): " QWEN_API_URL
+
+    if [[ -n "$QWEN_API_URL" ]]; then
+        read -p "  $(_ qwen_api_key): " QWEN_API_KEY
+        read -p "  $(_ qwen_embedding_model): text-embedding-v1]: " QWEN_EMBEDDING_MODEL
+        QWEN_EMBEDDING_MODEL=${QWEN_EMBEDDING_MODEL:-"text-embedding-v1"}
+    else
+        log_warning "$(_ qwen_skip_warning)"
+        QWEN_EMBEDDING_MODEL="text-embedding-v1"
+    fi
 }
 
 prompt_network_config() {
@@ -1201,6 +1273,17 @@ MINERU_TOKEN=${MINERU_TOKEN}
 AI_API_KEY=${AI_API_KEY}
 AI_API_URL=${AI_API_URL}
 AI_MODEL_ID=${AI_MODEL_ID:-unsloth/GLM-4.7-Flash-GGUF:BF16}
+
+# Alibaba Cloud OSS Configuration (for document storage)
+OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
+OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
+OSS_BUCKET_NAME=${OSS_BUCKET_NAME}
+OSS_ENDPOINT=${OSS_ENDPOINT}
+
+# Qwen API Configuration (for vector embeddings and RAG)
+QWEN_API_KEY=${QWEN_API_KEY}
+QWEN_API_URL=${QWEN_API_URL}
+QWEN_EMBEDDING_MODEL=${QWEN_EMBEDDING_MODEL:-text-embedding-v1}
 
 # Deployment Configuration
 DEPLOYMENT_TYPE=${DEPLOYMENT_TYPE}

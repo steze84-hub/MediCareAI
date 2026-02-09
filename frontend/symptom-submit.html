@@ -599,6 +599,216 @@
         #streamingContent.markdown-body {
             font-size: 15px;
         }
+
+        /* Knowledge Base Attribution Panel Styles */
+        .kb-attribution-panel {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+            overflow: hidden;
+        }
+
+        .kb-attribution-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .kb-attribution-header:hover {
+            opacity: 0.95;
+        }
+
+        .kb-attribution-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .kb-attribution-icon {
+            font-size: 20px;
+        }
+
+        .kb-attribution-toggle {
+            font-size: 20px;
+            transition: transform 0.3s;
+        }
+
+        .kb-attribution-panel.collapsed .kb-attribution-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .kb-attribution-content {
+            padding: 20px;
+            display: block;
+        }
+
+        .kb-attribution-panel.collapsed .kb-attribution-content {
+            display: none;
+        }
+
+        .kb-intro {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+            font-size: 14px;
+            color: #0c5460;
+            line-height: 1.5;
+        }
+
+        .kb-source-card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .kb-source-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .kb-source-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .kb-source-title {
+            font-weight: 600;
+            font-size: 16px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .kb-source-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .kb-source-relevance {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .kb-relevance-bar {
+            width: 80px;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .kb-relevance-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .kb-source-reason {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+
+        .kb-chunks-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .kb-chunk-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 3px solid #28a745;
+            font-size: 13px;
+        }
+
+        .kb-chunk-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .kb-chunk-section {
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+        }
+
+        .kb-chunk-similarity {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #28a745;
+        }
+
+        .kb-chunk-text {
+            color: #555;
+            line-height: 1.5;
+            font-size: 13px;
+        }
+
+        .kb-no-sources {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .kb-no-sources-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .kb-citation-hint {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px 15px;
+            margin-top: 15px;
+            border-radius: 0 8px 8px 0;
+            font-size: 13px;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -634,6 +844,7 @@
                         <div class="duration-select-wrapper">
                             <select id="duration_unit">
                                 <option value="">选择单位</option>
+                                <option value="秒">秒</option>
                                 <option value="分钟">分钟</option>
                                 <option value="小时">小时</option>
                                 <option value="天">天</option>
@@ -667,6 +878,10 @@
                         <input type="file" id="fileInput" multiple style="display: none;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
                     </div>
                     <div class="file-list" id="fileList"></div>
+                    <div style="margin-top: 15px; padding: 12px 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px; font-size: 14px; color: #856404;">
+                        <strong>⚠️ 隐私保护提醒：</strong><br>
+                        请在上传前删除或裁切图片中的<strong>个人姓名、身份证号、电话号码</strong>等敏感信息。系统会自动进行隐私信息识别和清理，但提前处理能更好保护您的隐私。
+                    </div>
                 </div>
             </div>
 
@@ -683,6 +898,62 @@
                 <div class="form-group">
                     <label>既往史相关疾病（可选）</label>
                     <textarea id="previous_diseases" rows="2" placeholder="例如：曾经患过类似症状的疾病"></textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="section-title">@提及医生（可选）</div>
+                <div class="form-group">
+                    <label style="font-weight: normal; color: #666; margin-bottom: 15px; display: block;">
+                        如果您希望特定医生关注您的病例，可以在这里@提及医生。医生将收到通知并可以查看您的诊断信息。
+                    </label>
+                    
+                    <div class="doctor-search-section" style="margin-bottom: 20px;">
+                        <label style="font-weight: 500; color: #555; margin-bottom: 8px; display: block;">搜索医生</label>
+                        <div class="doctor-search-input" style="display: flex; gap: 10px;">
+                            <input type="text" id="doctorSearchInput" placeholder="输入医生姓名、医院或专业领域" 
+                                style="flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;"
+                                oninput="searchDoctors()">
+                            <button type="button" class="search-btn" onclick="searchDoctors()" 
+                                style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">🔍 搜索</button>
+                        </div>
+                        <small style="color: #999; display: block; margin-top: 8px; font-size: 13px;">
+                            💡 显示的都是已认证医生，只展示昵称保护隐私
+                        </small>
+                    </div>
+                    
+                    <div id="doctorSearchResults" class="doctor-results" style="max-height: 250px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px; margin-bottom: 15px; background: #fafafa;">
+                        <div class="doctor-results-empty" style="text-align: center; padding: 30px 20px; color: #999;">
+                            输入关键词搜索医生...
+                        </div>
+                    </div>
+                    
+                    <div id="selectedDoctorDisplay" class="selected-doctor" style="display: none; background: #f0f3ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #667eea;">
+                        <h4 style="margin-bottom: 10px; color: #667eea; font-size: 16px;">✓ 已选择的医生</h4>
+                        <div class="selected-doctor-card" style="background: white; padding: 15px; border-radius: 6px;">
+                            <div class="doctor-name" id="selectedDoctorName" style="font-weight: 600; color: #333; font-size: 16px; margin-bottom: 5px;"></div>
+                            <div class="doctor-info" id="selectedDoctorDetail" style="color: #666; font-size: 14px;"></div>
+                        </div>
+                        <button type="button" onclick="clearSelectedDoctor()" 
+                            style="margin-top: 10px; padding: 8px 15px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">
+                            清除选择
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" id="selectedDoctorId">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="section-title">隐私授权</div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-weight: normal;">
+                        <input type="checkbox" id="share_with_doctor" style="margin-top: 3px; width: 18px; height: 18px; cursor: pointer;">
+                        <span style="flex: 1; line-height: 1.5;">
+                            <strong>允许将本次诊断信息共享给医生端</strong><br>
+                            <span style="color: #666; font-size: 14px;">勾选后，医生可以查看您的症状、AI诊断结果和上传的检查资料（个人敏感信息如姓名、身份证号等将被自动隐藏）。不勾选则仅您自己可见。</span>
+                        </span>
+                    </label>
                 </div>
             </div>
         </div>
@@ -709,7 +980,7 @@
     <!-- Markdown Parser Library -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
-        const API_BASE = 'http://192.168.50.115:8000';
+        const API_BASE = '';
         let uploadedFiles = [];
 
         // 处理 401 错误
@@ -809,6 +1080,7 @@
             const onsetTime = document.getElementById('onset_time').value;
             const triggers = document.getElementById('triggers').value;
             const previousDiseases = document.getElementById('previous_diseases').value;
+            const shareWithDoctor = document.getElementById('share_with_doctor').checked;
 
             if (!symptoms.trim()) {
                 showResult('error', '请描述您的主要症状');
@@ -833,28 +1105,81 @@
             resultDiv.innerHTML = '<span class="spinner"></span> AI正在实时分析您的症状...';
 
             try {
-                // 检测当前语言（根据页面语言属性）
-                const pageLang = document.documentElement.lang || 'zh-CN';
-                const language = pageLang.startsWith('zh') ? 'zh' : 'en';
+                // 步骤1: 先创建病历记录
+                document.getElementById('streamingStatus').textContent = '正在创建病历记录...';
                 
-                // 调用流式AI诊断API
-                const response = await fetch(`${API_BASE}/api/v1/ai/comprehensive-diagnosis-stream`, {
+                const caseTitle = `AI诊断 - ${severity}${durationValue ? ` - ${durationValue}${durationUnit}` : ''}`;
+                const caseDescriptionParts = [];
+                if (triggers) caseDescriptionParts.push(`诱发因素: ${triggers}`);
+                if (previousDiseases) caseDescriptionParts.push(`既往病史: ${previousDiseases}`);
+                
+                const createCaseResponse = await fetch(`${API_BASE}/api/v1/medical-cases/`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        title: caseTitle,
                         symptoms: symptoms,
                         severity: severity,
-                        duration: durationValue ? `${durationValue}${durationUnit}` : '',
-                        onset_time: onsetTime,
-                        triggers: triggers,
-                        previous_diseases: previousDiseases,
-                        uploaded_files: [],
-                        disease_category: 'respiratory',
-                        language: language
+                        description: caseDescriptionParts.join(' | ') || ''
                     })
+                });
+
+                if (!createCaseResponse.ok) {
+                    throw new Error('创建病历记录失败');
+                }
+
+                const medicalCase = await createCaseResponse.json();
+                const currentCaseId = medicalCase.id;
+                console.log('病历记录已创建:', currentCaseId);
+                
+                // 步骤2: 如果有文件，上传并等待提取完成，文件将关联到刚创建的病历
+                let uploadedDocuments = [];
+                let documentIds = [];
+                
+                if (uploadedFiles.length > 0) {
+                    uploadedDocuments = await uploadAndExtractFiles(currentCaseId);
+                    documentIds = uploadedDocuments.map(doc => doc.id).filter(id => id);
+                    
+                    // 显示提取的文档内容
+                    if (uploadedDocuments.length > 0) {
+                        const docHtml = displayExtractedDocuments(uploadedDocuments);
+                        diagnosisContent.innerHTML = docHtml + diagnosisContent.innerHTML;
+                    }
+                }
+                
+                // 检测当前语言（根据页面语言属性）
+                const pageLang = document.documentElement.lang || 'zh-CN';
+                const language = pageLang.startsWith('zh') ? 'zh' : 'en';
+                
+                // 调用流式AI诊断API，传入case_id以更新同一病历
+                const requestBody = {
+                    symptoms: symptoms,
+                    severity: severity,
+                    duration: durationValue ? `${durationValue}${durationUnit}` : '',
+                    onset_time: onsetTime,
+                    triggers: triggers,
+                    previous_diseases: previousDiseases,
+                    uploaded_files: [],
+                    document_ids: documentIds,
+                    disease_category: 'respiratory',
+                    language: language,
+                    case_id: currentCaseId,
+                    share_with_doctor: shareWithDoctor,
+                    doctor_id: selectedDoctorId
+                };
+                
+                console.log('提交诊断请求:', requestBody);
+                
+                const response = await fetch(`${API_BASE}/api/v1/ai/comprehensive-diagnosis-stream`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (!response.ok) {
@@ -908,15 +1233,15 @@
                                         case_id: data.case_id,
                                         model_used: data.model_used,
                                         tokens_used: data.tokens_used,
-                                        created_at: data.created_at
+                                        created_at: data.created_at,
+                                        knowledge_base_sources: data.knowledge_base_sources || [],
+                                        knowledge_base_selection_reasoning: data.knowledge_base_selection_reasoning || ''
                                     };
                                     document.getElementById('streamingStatus').innerHTML = 
                                         '<span style="color: #28a745;">✓ 诊断完成</span>';
                                     
-                                    // 上传文件（如果有）
-                                    if (uploadedFiles.length > 0 && caseId) {
-                                        await uploadFiles(caseId);
-                                    }
+                                    // 文件已在诊断前上传完成，此处无需再次上传
+                                    // 所有文件已关联到病历: ${currentCaseId}
                                 }
                             } catch (e) {
                                 console.error('解析流数据失败:', e, dataStr);
@@ -965,20 +1290,342 @@
             }
         }
 
-        // 上传文件
-        async function uploadFiles(caseId) {
+        // 上传文件到服务器并获取document_ids
+        // 参数: caseId - 文件关联的病历ID（必填）
+        async function uploadAndExtractFiles(caseId) {
             const token = localStorage.getItem('access_token');
+            const uploadedDocuments = [];
 
-            // 需要先创建一个病例才能上传文件
-            // 当前版本：模拟文件上传
-            console.log(`模拟上传 ${uploadedFiles.length} 个文件到病例 ${caseId}`);
-
-            for (const file of uploadedFiles) {
-                // 当前版本：仅记录日志
-                console.log(`文件 ${file.name} (${file.size} bytes) - 准备上传`);
+            if (uploadedFiles.length === 0) {
+                return [];
             }
 
-            return true;
+            if (!caseId) {
+                console.error('uploadAndExtractFiles 需要提供 caseId 参数');
+                return [];
+            }
+
+            // 更新状态显示
+            const statusDiv = document.getElementById('streamingStatus');
+            if (statusDiv) {
+                statusDiv.innerHTML = `<span class="spinner"></span> 正在上传 ${uploadedFiles.length} 个文件到病历...`;
+            }
+
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const file = uploadedFiles[i];
+                
+                try {
+                    // 步骤1: 上传文件到指定病历
+                    const uploadFormData = new FormData();
+                    uploadFormData.append('medical_case_id', caseId);
+                    uploadFormData.append('file', file);
+
+                    const uploadResponse = await fetch(`${API_BASE}/api/v1/documents/upload`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: uploadFormData
+                    });
+
+                    if (!uploadResponse.ok) {
+                        console.error(`上传文件失败: ${file.name}`);
+                        continue;
+                    }
+
+                    const document = await uploadResponse.json();
+                    
+                    // 更新状态
+                    if (statusDiv) {
+                        statusDiv.innerHTML = `<span class="spinner"></span> 文件 ${i + 1}/${uploadedFiles.length} 已上传，正在提取内容...`;
+                    }
+
+                    // 步骤3: 触发内容提取（MinerU）
+                    const extractResponse = await fetch(`${API_BASE}/api/v1/documents/${document.id}/extract`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            extraction_type: 'medical_report'
+                        })
+                    });
+
+                    if (extractResponse.ok) {
+                        // 步骤4: 轮询等待处理完成
+                        let retries = 0;
+                        const maxRetries = 30; // 最多等待60秒
+                        
+                        while (retries < maxRetries) {
+                            await new Promise(resolve => setTimeout(resolve, 2000)); // 等待2秒
+                            
+                            const statusResponse = await fetch(`${API_BASE}/api/v1/documents/${document.id}/content`, {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+
+                            if (statusResponse.ok) {
+                                const docContent = await statusResponse.json();
+                                
+                                // 检查cleaned_content是否存在（实际提取的文本内容）
+                                if (docContent.cleaned_content && docContent.cleaned_content.text) {
+                                    // 处理完成
+                                    uploadedDocuments.push({
+                                        id: document.id,
+                                        filename: file.name,
+                                        extracted_content: docContent.extracted_content,
+                                        cleaned_content: docContent.cleaned_content,
+                                        pii_cleaning: docContent.pii_cleaning
+                                    });
+                                    
+                                    if (statusDiv) {
+                                        statusDiv.innerHTML = `<span style="color: #28a745;">✓</span> 文件 ${i + 1}/${uploadedFiles.length} 处理完成`;
+                                    }
+                                    break;
+                                }
+                            }
+                            
+                            retries++;
+                            if (statusDiv) {
+                                statusDiv.innerHTML = `<span class="spinner"></span> 文件 ${i + 1}/${uploadedFiles.length} 处理中 (${retries}/${maxRetries})...`;
+                            }
+                        }
+                        
+                        if (retries >= maxRetries) {
+                            console.warn(`文件处理超时: ${file.name}`);
+                            // 即使超时也添加文档ID，让后端继续处理
+                            uploadedDocuments.push({
+                                id: document.id,
+                                filename: file.name,
+                                extracted_content: null,
+                                status: 'processing'
+                            });
+                        }
+                    }
+
+                } catch (error) {
+                    console.error(`处理文件 ${file.name} 时出错:`, error);
+                }
+            }
+
+            return uploadedDocuments;
+        }
+
+        // 快速上传文件（只获取document_id，不等待提取完成）
+        // 参数: caseId - 文件关联的病历ID（必填）
+        async function quickUploadFiles(caseId) {
+            const token = localStorage.getItem('access_token');
+            const documentIds = [];
+
+            if (uploadedFiles.length === 0) {
+                return [];
+            }
+
+            if (!caseId) {
+                console.error('quickUploadFiles 需要提供 caseId 参数');
+                return [];
+            }
+
+            for (let i = 0; i < uploadedFiles.length; i++) {
+                const file = uploadedFiles[i];
+                
+                try {
+                    // 步骤1: 上传文件到指定病历
+                    const uploadFormData = new FormData();
+                    uploadFormData.append('medical_case_id', caseId);
+                    uploadFormData.append('file', file);
+
+                    const uploadResponse = await fetch(`${API_BASE}/api/v1/documents/upload`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: uploadFormData
+                    });
+
+                    if (!uploadResponse.ok) {
+                        console.error(`上传文件失败: ${file.name}`);
+                        continue;
+                    }
+
+                    const document = await uploadResponse.json();
+                    documentIds.push(document.id);
+                    
+                    // 步骤3: 触发内容提取（后台异步处理，不等待）
+                    fetch(`${API_BASE}/api/v1/documents/${document.id}/extract`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            extraction_type: 'medical_report'
+                        })
+                    }).catch(err => console.error(`提取请求失败: ${file.name}`, err));
+
+                } catch (error) {
+                    console.error(`快速上传文件 ${file.name} 时出错:`, error);
+                }
+            }
+
+            return documentIds;
+        }
+
+        // 显示文档上传状态（提取在后台进行）
+        function displayDocumentUploadStatus(files) {
+            if (!files || files.length === 0) return '';
+            
+            let html = `
+                <div style="margin: 20px 0; padding: 15px; background: #f0f7ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">📄 上传的文档资料</h4>
+                    <div style="font-size: 14px; color: #666;">
+            `;
+            
+            files.forEach((file, index) => {
+                html += `
+                    <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 6px;">
+                        <strong>文件 ${index + 1}:</strong> ${file.name}
+                        <span style="color: #007bff; font-size: 12px; margin-left: 10px;">
+                            <span class="spinner" style="width: 12px; height: 12px; border-width: 2px;"></span> 
+                            内容提取中...
+                        </span>
+                    </div>
+                `;
+            });
+            
+            html += '</div></div>';
+            return html;
+        }
+
+        // 显示提取的文档内容
+        function displayExtractedDocuments(documents) {
+            if (!documents || documents.length === 0) return '';
+            
+            let html = `
+                <div style="margin: 20px 0; padding: 15px; background: #f0f7ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">📄 上传的文档资料</h4>
+                    <div style="font-size: 14px; color: #666;">
+            `;
+            
+            documents.forEach((doc, index) => {
+                html += `
+                    <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 6px;">
+                        <strong>文件 ${index + 1}:</strong> ${doc.filename}
+                        ${doc.pii_cleaning ? `<span style="color: #28a745; font-size: 12px;"> (PII已清理)</span>` : ''}
+                        ${doc.extracted_content ? `
+                            <div style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 13px; max-height: 150px; overflow-y: auto;">
+                                <strong>提取内容预览:</strong><br>
+                                ${doc.extracted_content.substring(0, 300)}${doc.extracted_content.length > 300 ? '...' : ''}
+                            </div>
+                        ` : '<div style="color: #999; font-size: 12px;">内容提取中...</div>'}
+                    </div>
+                `;
+            });
+            
+            html += '</div></div>';
+            return html;
+        }
+
+        // 渲染知识库溯源面板
+        function renderKnowledgeBaseSources(sources, reasoning) {
+            if (!sources || sources.length === 0) {
+                return `
+                    <div class="kb-attribution-panel collapsed" id="kbAttributionPanel">
+                        <div class="kb-attribution-header" onclick="toggleKBPanel()">
+                            <div class="kb-attribution-title">
+                                <span class="kb-attribution-icon">📚</span>
+                                <span>诊断知识库来源</span>
+                            </div>
+                            <span class="kb-attribution-toggle">▼</span>
+                        </div>
+                        <div class="kb-attribution-content">
+                            <div class="kb-no-sources">
+                                <div class="kb-no-sources-icon">📖</div>
+                                <div>本次诊断基于通用医学知识</div>
+                                <div style="font-size: 12px; color: #999; margin-top: 5px;">未引用特定知识库</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            let sourcesHtml = sources.map((source, index) => {
+                const relevancePercent = Math.min(100, Math.round((source.relevance_score || 0) * 33.33)); // Scale to percentage
+                const chunksHtml = source.chunks && source.chunks.length > 0 
+                    ? source.chunks.map((chunk, cidx) => `
+                        <div class="kb-chunk-item">
+                            <div class="kb-chunk-header">
+                                <span class="kb-chunk-section">📄 ${chunk.section_title || '相关内容'}</span>
+                                <span class="kb-chunk-similarity">
+                                    <span>相似度:</span>
+                                    <strong>${((chunk.similarity_score || 0) * 100).toFixed(1)}%</strong>
+                                </span>
+                            </div>
+                            <div class="kb-chunk-text">${chunk.text_preview || ''}</div>
+                        </div>
+                    `).join('')
+                    : '<div style="color: #999; font-size: 12px; padding: 10px;">无详细内容片段</div>';
+
+                return `
+                    <div class="kb-source-card">
+                        <div class="kb-source-header">
+                            <div class="kb-source-title">
+                                <span>${source.category_name || source.category}</span>
+                                <span class="kb-source-badge">${source.chunks_count || 0} 条引用</span>
+                            </div>
+                            <div class="kb-source-relevance">
+                                <span>相关度:</span>
+                                <div class="kb-relevance-bar">
+                                    <div class="kb-relevance-fill" style="width: ${relevancePercent}%"></div>
+                                </div>
+                                <span>${source.relevance_score?.toFixed(2) || '0.00'}</span>
+                            </div>
+                        </div>
+                        <div class="kb-source-reason">
+                            <strong>选择原因:</strong> ${source.selection_reason || '基于症状匹配'}
+                        </div>
+                        <div class="kb-chunks-title">
+                            <span>📋 引用的知识内容</span>
+                        </div>
+                        ${chunksHtml}
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="kb-attribution-panel collapsed" id="kbAttributionPanel">
+                    <div class="kb-attribution-header" onclick="toggleKBPanel()">
+                        <div class="kb-attribution-title">
+                            <span class="kb-attribution-icon">📚</span>
+                            <span>诊断知识库来源 (${sources.length} 个知识库)</span>
+                        </div>
+                        <span class="kb-attribution-toggle">▼</span>
+                    </div>
+                    <div class="kb-attribution-content">
+                        <div class="kb-intro">
+                            <strong>💡 为什么显示这些信息？</strong><br>
+                            为了让您了解AI诊断的依据，我们展示了诊断过程中引用的医学知识库内容。
+                            这些引用来自权威的医学指南和疾病诊疗标准，帮助您判断诊断的可信度。
+                        </div>
+                        ${sourcesHtml}
+                        <div class="kb-citation-hint">
+                            <strong>🔍 如何在诊断中找到这些引用？</strong><br>
+                            在诊断报告中，引用知识库的内容会标注为 [知识库: 章节标题] 格式，
+                            您可以通过这些标注快速定位到具体的知识来源。
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 切换知识库面板展开/折叠
+        function toggleKBPanel() {
+            const panel = document.getElementById('kbAttributionPanel');
+            if (panel) {
+                panel.classList.toggle('collapsed');
+            }
         }
 
         // 显示AI诊断结果
@@ -1002,6 +1649,11 @@
                 const modelUsed = info.model_used || 'unsloth/GLM-4.7-Flash-GGUF:BF16';
                 const tokensUsed = info.tokens_used || 0;
                 const createdAt = info.created_at ? new Date(info.created_at).toLocaleString('zh-CN') : new Date().toLocaleString('zh-CN');
+                
+                // 获取知识库溯源信息
+                const kbSources = info.knowledge_base_sources || [];
+                const kbReasoning = info.knowledge_base_selection_reasoning || '';
+                const kbPanelHtml = renderKnowledgeBaseSources(kbSources, kbReasoning);
 
                 diagnosisContent.innerHTML = `
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
@@ -1010,7 +1662,8 @@
                             ${formattedDiagnosis}
                         </div>
                     </div>
-                    <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; font-size: 14px;">
+                    ${kbPanelHtml}
+                    <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; font-size: 14px; margin-top: 20px;">
                         <strong>📊 诊断信息：</strong><br>
                         病例ID: ${caseId}<br>
                         模型: ${modelUsed}<br>
@@ -1051,6 +1704,100 @@
             updateFileList();
             document.getElementById('aiResult').classList.remove('show');
             document.getElementById('result').classList.remove('show');
+            clearSelectedDoctor();
+        }
+
+        let selectedDoctorId = null;
+
+        async function searchDoctors() {
+            const query = document.getElementById('doctorSearchInput').value.trim();
+            const resultsContainer = document.getElementById('doctorSearchResults');
+
+            if (!query) {
+                resultsContainer.innerHTML = '<div class="doctor-results-empty" style="text-align: center; padding: 30px 20px; color: #999;">输入关键词搜索医生...</div>';
+                return;
+            }
+
+            resultsContainer.innerHTML = '<div class="doctor-results-empty" style="text-align: center; padding: 30px 20px; color: #999;">搜索中...</div>';
+
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    handleUnauthorized();
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE}/api/v1/sharing/doctors?q=${encodeURIComponent(query)}&limit=10`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('搜索失败');
+                }
+
+                const doctors = await response.json();
+
+                if (doctors.length === 0) {
+                    resultsContainer.innerHTML = '<div class="doctor-results-empty" style="text-align: center; padding: 30px 20px; color: #999;">未找到匹配的医生</div>';
+                    return;
+                }
+
+                resultsContainer.innerHTML = doctors.map(doctor => `
+                    <div class="doctor-card" onclick="selectDoctor('${doctor.id}', '${doctor.display_name}', '${doctor.hospital || ''}', '${doctor.department || ''}', '${doctor.specialty || ''}')"
+                        style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s; background: white;"
+                        onmouseover="this.style.borderColor='#667eea';this.style.background='#f8f9ff';"
+                        onmouseout="if(!this.classList.contains('selected')){this.style.borderColor='#e0e0e0';this.style.background='white';}">
+                        <div class="doctor-card-name" style="font-weight: 600; color: #333; margin-bottom: 5px;">${doctor.display_name}</div>
+                        <div class="doctor-card-info" style="font-size: 13px; color: #666;">
+                            ${doctor.hospital || '未知医院'} · ${doctor.department || '未知科室'}<br>
+                            <small style="color: #999;">专业领域：${doctor.specialty || '未填写'}</small>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                resultsContainer.innerHTML = '<div class="doctor-results-empty" style="text-align: center; padding: 30px 20px; color: #999;">搜索失败，请重试</div>';
+            }
+        }
+
+        function selectDoctor(id, name, hospital, department, specialty) {
+            selectedDoctorId = id;
+            document.getElementById('selectedDoctorId').value = id;
+
+            const cards = document.querySelectorAll('.doctor-card');
+            cards.forEach(card => {
+                card.classList.remove('selected');
+                card.style.borderColor = '#e0e0e0';
+                card.style.background = 'white';
+            });
+
+            event.currentTarget.classList.add('selected');
+            event.currentTarget.style.borderColor = '#667eea';
+            event.currentTarget.style.background = '#f0f3ff';
+
+            document.getElementById('selectedDoctorName').textContent = name;
+            document.getElementById('selectedDoctorDetail').innerHTML = `
+                <strong>${hospital || '未知医院'}</strong> · ${department || '未知科室'}<br>
+                <small>专业领域：${specialty || '未填写'}</small>
+            `;
+            document.getElementById('selectedDoctorDisplay').style.display = 'block';
+
+            document.getElementById('doctorSearchResults').style.display = 'none';
+        }
+
+        function clearSelectedDoctor() {
+            selectedDoctorId = null;
+            document.getElementById('selectedDoctorId').value = '';
+            document.getElementById('selectedDoctorDisplay').style.display = 'none';
+            document.getElementById('doctorSearchInput').value = '';
+            document.getElementById('doctorSearchResults').innerHTML = '<div class="doctor-results-empty" style="text-align: center; padding: 30px 20px; color: #999;">输入关键词搜索医生...</div>';
+            document.getElementById('doctorSearchResults').style.display = 'block';
         }
 
         // 页面加载时检查登录状态

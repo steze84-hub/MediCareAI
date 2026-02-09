@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👨‍⚕️</text></svg>">
+    <title>MediCare AI - 科研导出</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 0 30px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #11998e;
+        }
+
+        .nav-brand .logo {
+            font-size: 28px;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: #666;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            color: #11998e;
+            background: rgba(17, 153, 142, 0.1);
+        }
+
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .nav-user button {
+            background: #f5f5f5;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .nav-user button:hover {
+            background: #e0e0e0;
+        }
+
+        .main-content {
+            margin-top: 60px;
+            padding: 30px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .page-header {
+            background: white;
+            padding: 24px 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+        }
+
+        .page-header h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .export-panel {
+            background: white;
+            padding: 24px 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+        }
+
+        .export-options {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .option-group {
+            flex: 1;
+        }
+
+        .option-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .option-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .cases-section {
+            margin-bottom: 24px;
+        }
+
+        .cases-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .cases-header h3 {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .select-all-btn {
+            background: none;
+            border: 1px solid #11998e;
+            color: #11998e;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .select-all-btn:hover {
+            background: rgba(17, 153, 142, 0.1);
+        }
+
+        .cases-list {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .case-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+
+        .case-item:hover {
+            background: #f8f9fa;
+        }
+
+        .case-item:last-child {
+            border-bottom: none;
+        }
+
+        .case-checkbox {
+            margin-right: 16px;
+        }
+
+        .case-checkbox input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .case-info {
+            flex: 1;
+        }
+
+        .case-id {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .case-meta {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .case-category {
+            background: rgba(17, 153, 142, 0.1);
+            color: #11998e;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 auto;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(17, 153, 142, 0.3);
+        }
+
+        .export-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #11998e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">👨‍⚕️</span>
+            <span>MediCare AI 医生平台</span>
+        </div>
+        <div class="nav-menu">
+            <a href="/doctor-dashboard.html">工作台</a>
+            <a href="/doctor-cases.html">病例浏览</a>
+            <a href="/doctor-mentions.html">@我的</a>
+            <a href="/doctor-export.html" class="active">科研导出</a>
+        </div>
+        <div class="nav-user">
+            <span id="doctorName"></span>
+            <button onclick="logout()">退出</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="page-header">
+            <h1>📊 科研数据导出</h1>
+            <p>选择病例并导出为JSON或CSV格式，用于科研分析。所有导出数据均已匿名化处理。</p>
+        </div>
+
+        <div class="export-panel">
+            <div class="alert alert-info">
+                💡 提示：仅显示已设置为"科研可用"的病例数据，所有导出内容均已脱敏处理。
+            </div>
+
+            <div class="export-options">
+                <div class="option-group">
+                    <label>导出格式</label>
+                    <select id="exportFormat">
+                        <option value="json">JSON格式（完整数据）</option>
+                        <option value="csv">CSV格式（表格数据）</option>
+                    </select>
+                </div>
+                <div class="option-group">
+                    <label>导出选项</label>
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="includeDocuments" checked>
+                        <span>包含检查资料内容</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="cases-section">
+                <div class="cases-header">
+                    <h3>📋 可选病例列表</h3>
+                    <button class="select-all-btn" onclick="toggleSelectAll()">全选/取消全选</button>
+                </div>
+                <div id="casesList" class="cases-list">
+                    <div class="loading">
+                        <span class="spinner"></span> 加载病例列表...
+                    </div>
+                </div>
+            </div>
+
+            <button class="export-btn" id="exportBtn" onclick="exportData()">
+                <span>📥</span>
+                <span>导出选中病例</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let allCases = [];
+
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/doctor-login.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/doctor-login.html';
+        }
+
+        async function loadDoctorInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('doctorName').textContent = data.full_name || data.display_name || '医生';
+                }
+            } catch (error) {
+                console.error('加载医生信息失败:', error);
+            }
+        }
+
+        async function loadCases() {
+            const container = document.getElementById('casesList');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/doctor/cases?type=public&limit=100`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('加载失败');
+                }
+
+                const data = await response.json();
+                allCases = data;
+
+                if (!allCases || allCases.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">📭</div>
+                            <p>暂无可导出的病例</p>
+                            <p style="font-size: 13px; margin-top: 8px;">只有标记为"科研可用"的病例才会显示在这里</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                renderCases(allCases);
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">⚠️</div>
+                        <p>加载病例列表失败</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderCases(cases) {
+            const container = document.getElementById('casesList');
+            
+            container.innerHTML = cases.map(caseItem => {
+                const profile = caseItem.anonymous_patient_profile || {};
+                return `
+                    <div class="case-item">
+                        <div class="case-checkbox">
+                            <input type="checkbox" value="${caseItem.id}" class="case-select">
+                        </div>
+                        <div class="case-info">
+                            <div class="case-id">病例 #${caseItem.id.slice(0, 8)}</div>
+                            <div class="case-meta">
+                                ${profile.age_range || '未知年龄'} · ${profile.gender || '未知性别'} · ${profile.city_tier || '未知地区'} · 
+                                ${new Date(caseItem.created_at).toLocaleDateString('zh-CN')}
+                            </div>
+                        </div>
+                        <span class="case-category">${caseItem.disease_category || '未分类'}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleSelectAll() {
+            const checkboxes = document.querySelectorAll('.case-select');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            
+            checkboxes.forEach(cb => {
+                cb.checked = !allChecked;
+            });
+        }
+
+        async function exportData() {
+            const selectedCases = Array.from(document.querySelectorAll('.case-select:checked')).map(cb => cb.value);
+            
+            if (selectedCases.length === 0) {
+                alert('请至少选择一个病例');
+                return;
+            }
+
+            const format = document.getElementById('exportFormat').value;
+            const includeDocuments = document.getElementById('includeDocuments').checked;
+            const exportBtn = document.getElementById('exportBtn');
+
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = '<span class="spinner"></span><span>导出中...</span>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/doctor/cases/export`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        case_ids: selectedCases,
+                        format: format,
+                        include_documents: includeDocuments,
+                        anonymize: true
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || '导出失败');
+                }
+
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `research_data_${new Date().toISOString().slice(0, 10)}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                alert(`成功导出 ${selectedCases.length} 个病例`);
+            } catch (error) {
+                alert('导出失败: ' + error.message);
+            } finally {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = '<span>📥</span><span>导出选中病例</span>';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!checkAuth()) return;
+            loadDoctorInfo();
+            loadCases();
+        });
+    </script>
+</body>
+</html>

@@ -4,6 +4,7 @@ Initialize database tables
 import asyncio
 from app.db.database import AsyncSessionLocal, engine, Base
 from app.models import models
+from app.models.ai_model_config import AIModelConfiguration
 
 async def init_db():
     """Create all tables"""

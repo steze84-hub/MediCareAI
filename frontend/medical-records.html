@@ -786,6 +786,172 @@
             height: 18px;
             cursor: pointer;
         }
+
+        /* Share Tabs */
+        .share-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .share-tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .share-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 500;
+        }
+
+        .share-panel {
+            display: none;
+        }
+
+        .share-panel.active {
+            display: block;
+        }
+
+        /* Doctor Search */
+        .doctor-search-section {
+            margin-bottom: 20px;
+        }
+
+        .doctor-search-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .doctor-search-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        .doctor-search-input input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .search-btn {
+            padding: 10px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .doctor-results {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        .doctor-results-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .doctor-card {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .doctor-card:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .doctor-card.selected {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+
+        .doctor-card-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .doctor-card-info {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .selected-doctor {
+            background: #f0f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .selected-doctor h4 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .selected-doctor-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #667eea;
+        }
+
+        .consent-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .consent-section label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .consent-text {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .consent-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            padding: 10px 20px;
+            background: #e0e0e0;
+            color: #333;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -897,36 +1063,81 @@
                 <span class="close-btn" onclick="closeShareModal()">&times;</span>
             </div>
             <div class="modal-body">
-                <div class="share-options">
-                    <div class="share-link-section">
-                        <label>分享链接</label>
-                        <div class="share-link-input">
-                            <input type="text" id="shareLink" readonly>
-                            <button class="copy-btn" onclick="copyShareLink()">复制</button>
+                <div class="share-tabs">
+                    <button class="share-tab active" onclick="switchShareTab('link')" id="tabLink">链接分享</button>
+                    <button class="share-tab" onclick="switchShareTab('doctor')" id="tabDoctor">@医生</button>
+                </div>
+                
+                <!-- 链接分享 -->
+                <div id="shareLinkPanel" class="share-panel active">
+                    <div class="share-options">
+                        <div class="share-link-section">
+                            <label>分享链接</label>
+                            <div class="share-link-input">
+                                <input type="text" id="shareLink" readonly>
+                                <button class="copy-btn" onclick="copyShareLink()">复制</button>
+                            </div>
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="includeDiagnosis" checked onchange="updateShareLink()">
+                                    包含诊断结果
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="includeSymptoms" checked onchange="updateShareLink()">
+                                    包含症状描述
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="includePersonal" onchange="updateShareLink()">
+                                    包含个人信息
+                                </label>
+                            </div>
                         </div>
-                        <div class="checkbox-group">
-                            <label>
-                                <input type="checkbox" id="includeDiagnosis" checked onchange="updateShareLink()">
-                                包含诊断结果
-                            </label>
-                            <label>
-                                <input type="checkbox" id="includeSymptoms" checked onchange="updateShareLink()">
-                                包含症状描述
-                            </label>
-                            <label>
-                                <input type="checkbox" id="includePersonal" onchange="updateShareLink()">
-                                包含个人信息
-                            </label>
+                        <div class="qr-section">
+                            <label>扫描二维码分享</label>
+                            <div id="qrcode"></div>
                         </div>
                     </div>
-                    <div class="qr-section">
-                        <label>扫描二维码分享</label>
-                        <div id="qrcode"></div>
+                </div>
+                
+                <!-- @医生 -->
+                <div id="shareDoctorPanel" class="share-panel" style="display: none;">
+                    <div class="doctor-search-section">
+                        <label>搜索医生</label>
+                        <div class="doctor-search-input">
+                            <input type="text" id="doctorSearchInput" placeholder="输入医生姓名、医院或专业领域" oninput="searchDoctors()">
+                            <button class="search-btn" onclick="searchDoctors()">🔍</button>
+                        </div>
+                        <small style="color: #666; display: block; margin-top: 5px;">显示的都是已认证医生，只展示昵称，不暴露真实姓名</small>
+                    </div>
+                    
+                    <div id="doctorSearchResults" class="doctor-results">
+                        <div class="doctor-results-empty">输入关键词搜索医生...</div>
+                    </div>
+                    
+                    <div id="selectedDoctorInfo" class="selected-doctor" style="display: none;">
+                        <h4>已选择医生</h4>
+                        <div class="selected-doctor-card">
+                            <div class="doctor-name" id="selectedDoctorName"></div>
+                            <div class="doctor-info" id="selectedDoctorInfo"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="consent-section">
+                        <label>分享授权</label>
+                        <div class="consent-text">
+                            <p>您即将将此病例分享给指定的医生。分享内容将自动脱敏处理，隐藏您的姓名、身份证号、手机号等敏感信息。</p>
+                            <p>医生将可以查看：症状描述、AI诊断结果、检查资料（已脱敏）</p>
+                        </div>
+                        <label class="consent-checkbox">
+                            <input type="checkbox" id="shareConsent" checked>
+                            我已阅读并同意分享此病例给选定的医生
+                        </label>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-primary" onclick="closeShareModal()">关闭</button>
+                <button class="btn-secondary" onclick="closeShareModal()">关闭</button>
+                <button class="btn-primary" id="shareActionBtn" onclick="shareToDoctor()" style="display: none;">分享给医生</button>
             </div>
         </div>
     </div>
@@ -938,7 +1149,7 @@
     <!-- QR Code Library for Sharing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
-        const API_BASE = 'http://192.168.50.115:8000';
+        const API_BASE = '';
 
         // 处理 401 错误
         function handleUnauthorized() {
@@ -1119,13 +1330,9 @@
 
                 <!-- 医生批注区域 -->
                 <div class="annotations-section" id="annotationsSection">
-                    <div class="detail-section-title">👨‍⚕️ 医生批注</div>
+                    <div class="detail-section-title">👨‍⚕️ 医生反馈</div>
                     <div class="annotation-list" id="annotationList">
-                        ${renderAnnotations(caseItem.id)}
-                    </div>
-                    <div class="annotation-input">
-                        <textarea id="annotationText" placeholder="添加医生批注..."></textarea>
-                        <button class="action-btn note" onclick="addAnnotation('${caseItem.id}')">添加批注</button>
+                        <p style="color: #999; font-style: italic;">正在加载医生反馈...</p>
                     </div>
                 </div>
 
@@ -1151,6 +1358,265 @@
 
             // 存储当前查看的病历ID
             window.currentViewingCaseId = caseId;
+            
+            // 加载医生评论
+            loadDoctorComments(caseId);
+        }
+        
+        // 加载医生评论
+        async function loadDoctorComments(caseId) {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                document.getElementById('annotationList').innerHTML = 
+                    '<p style="color: #999; font-style: italic;">请先登录查看医生反馈</p>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/medical-cases/${caseId}/doctor-comments`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error('获取医生反馈失败');
+                }
+                
+                const comments = await response.json();
+                renderDoctorComments(comments);
+            } catch (error) {
+                console.error('加载医生评论失败:', error);
+                document.getElementById('annotationList').innerHTML = 
+                    '<p style="color: #999; font-style: italic;">加载医生反馈失败，请稍后重试</p>';
+            }
+        }
+        
+        // 渲染医生评论
+        function renderDoctorComments(comments) {
+            const container = document.getElementById('annotationList');
+            
+            if (!comments || comments.length === 0) {
+                container.innerHTML = 
+                    '<p style="color: #999; font-style: italic;">暂无医生反馈</p>';
+                return;
+            }
+            
+            const commentTypeLabels = {
+                'suggestion': '建议',
+                'diagnosis_opinion': '诊断意见',
+                'treatment_advice': '治疗建议',
+                'general': '一般评论'
+            };
+            
+            container.innerHTML = comments.map(comment => {
+                const typeLabel = commentTypeLabels[comment.comment_type] || '反馈';
+                const date = new Date(comment.created_at).toLocaleString('zh-CN');
+                
+                // Render patient replies
+                let repliesHtml = '';
+                if (comment.patient_replies && comment.patient_replies.length > 0) {
+                    repliesHtml = comment.patient_replies.map(reply => {
+                        const replyDate = new Date(reply.created_at).toLocaleString('zh-CN');
+                        return `
+                            <div class="patient-reply" style="
+                                background: #f0f8ff;
+                                border-left: 3px solid #28a745;
+                                padding: 10px 12px;
+                                margin-top: 10px;
+                                margin-left: 20px;
+                                border-radius: 6px;
+                                font-size: 14px;
+                            ">
+                                <div style="
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                    margin-bottom: 6px;
+                                ">
+                                    <span style="font-weight: 600; color: #28a745;">🙋 我的回复</span>
+                                    <span style="color: #999; font-size: 12px;">${replyDate}</span>
+                                </div>
+                                <div style="color: #333; line-height: 1.5;">${escapeHtml(reply.content)}</div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+                
+                // Reply form (hidden by default)
+                const replyFormId = `reply-form-${comment.id}`;
+                const replyFormHtml = `
+                    <div id="${replyFormId}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e0e0e0;">
+                        <textarea id="reply-text-${comment.id}" placeholder="输入您的回复..." style="
+                            width: 100%;
+                            padding: 10px;
+                            border: 1px solid #ddd;
+                            border-radius: 6px;
+                            resize: vertical;
+                            min-height: 60px;
+                            font-family: inherit;
+                            font-size: 14px;
+                            margin-bottom: 8px;
+                        "></textarea>
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="toggleReplyForm('${comment.id}')" style="
+                                padding: 6px 12px;
+                                background: #6c757d;
+                                color: white;
+                                border: none;
+                                border-radius: 4px;
+                                cursor: pointer;
+                                font-size: 13px;
+                            ">取消</button>
+                            <button onclick="submitReply('${comment.id}')" style="
+                                padding: 6px 12px;
+                                background: #28a745;
+                                color: white;
+                                border: none;
+                                border-radius: 4px;
+                                cursor: pointer;
+                                font-size: 13px;
+                            ">发送回复</button>
+                        </div>
+                    </div>
+                `;
+                
+                return `
+                    <div class="annotation-item" style="
+                        background: #f8f9ff;
+                        border-left: 4px solid #667eea;
+                        padding: 15px;
+                        margin-bottom: 15px;
+                        border-radius: 8px;
+                    ">
+                        <div class="annotation-header" style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 10px;
+                            padding-bottom: 8px;
+                            border-bottom: 1px solid #e0e0e0;
+                        ">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span class="annotation-author" style="
+                                    font-weight: 600;
+                                    color: #667eea;
+                                ">👨‍⚕️ ${comment.doctor_name}</span>
+                                <span style="
+                                    background: #667eea;
+                                    color: white;
+                                    padding: 2px 8px;
+                                    border-radius: 12px;
+                                    font-size: 12px;
+                                ">${typeLabel}</span>
+                            </div>
+                            <span style="color: #999; font-size: 13px;">${date}</span>
+                        </div>
+                        <div style="color: #666; font-size: 13px; margin-bottom: 10px;">
+                            🏥 ${comment.doctor_hospital} · ${comment.doctor_specialty}
+                        </div>
+                        <div class="annotation-content" style="
+                            line-height: 1.6;
+                            color: #333;
+                            white-space: pre-wrap;
+                            margin-bottom: 10px;
+                        ">${escapeHtml(comment.content)}</div>
+                        
+                        ${repliesHtml}
+                        
+                        <div style="margin-top: 10px;">
+                            <button onclick="toggleReplyForm('${comment.id}')" style="
+                                padding: 5px 12px;
+                                background: transparent;
+                                color: #667eea;
+                                border: 1px solid #667eea;
+                                border-radius: 4px;
+                                cursor: pointer;
+                                font-size: 13px;
+                                display: flex;
+                                align-items: center;
+                                gap: 5px;
+                            ">
+                                💬 回复医生
+                            </button>
+                        </div>
+                        
+                        ${replyFormHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Toggle reply form visibility
+        function toggleReplyForm(commentId) {
+            const form = document.getElementById(`reply-form-${commentId}`);
+            if (form) {
+                form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+        
+        // Submit patient reply
+        async function submitReply(commentId) {
+            const caseId = window.currentViewingCaseId;
+            const textarea = document.getElementById(`reply-text-${commentId}`);
+            const content = textarea.value.trim();
+            
+            if (!content) {
+                alert('请输入回复内容');
+                return;
+            }
+            
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                handleUnauthorized();
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/medical-cases/${caseId}/doctor-comments/${commentId}/reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content })
+                });
+                
+                if (response.status === 401) {
+                    handleUnauthorized();
+                    return;
+                }
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || '发送回复失败');
+                }
+                
+                // Clear textarea and hide form
+                textarea.value = '';
+                toggleReplyForm(commentId);
+                
+                // Reload comments to show the new reply
+                await loadDoctorComments(caseId);
+                
+                alert('回复已发送');
+            } catch (error) {
+                console.error('发送回复失败:', error);
+                alert('发送回复失败: ' + error.message);
+            }
+        }
+        
+        // HTML转义函数
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // 导出PDF功能
@@ -1253,6 +1719,146 @@
             alert('链接已复制到剪贴板！');
         }
 
+        // 切换分享标签
+        function switchShareTab(tab) {
+            document.querySelectorAll('.share-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.share-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.share-panel').forEach(p => p.style.display = 'none');
+
+            if (tab === 'link') {
+                document.getElementById('tabLink').classList.add('active');
+                document.getElementById('shareLinkPanel').classList.add('active');
+                document.getElementById('shareLinkPanel').style.display = 'block';
+                document.getElementById('shareActionBtn').style.display = 'none';
+            } else {
+                document.getElementById('tabDoctor').classList.add('active');
+                document.getElementById('shareDoctorPanel').classList.add('active');
+                document.getElementById('shareDoctorPanel').style.display = 'block';
+                document.getElementById('shareActionBtn').style.display = 'inline-block';
+                document.getElementById('shareActionBtn').textContent = '@提及医生';
+            }
+        }
+
+        // 搜索医生
+        async function searchDoctors() {
+            const query = document.getElementById('doctorSearchInput').value.trim();
+            const resultsContainer = document.getElementById('doctorSearchResults');
+
+            if (!query) {
+                resultsContainer.innerHTML = '<div class="doctor-results-empty">输入关键词搜索医生...</div>';
+                return;
+            }
+
+            resultsContainer.innerHTML = '<div class="doctor-results-empty">搜索中...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/sharing/doctors?q=${encodeURIComponent(query)}&limit=20`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('搜索失败');
+                }
+
+                const doctors = await response.json();
+
+                if (doctors.length === 0) {
+                    resultsContainer.innerHTML = '<div class="doctor-results-empty">未找到匹配的医生</div>';
+                    return;
+                }
+
+                resultsContainer.innerHTML = doctors.map(doctor => `
+                    <div class="doctor-card" onclick="selectDoctor('${doctor.id}', '${doctor.display_name}', '${doctor.hospital}', '${doctor.department}', '${doctor.specialty}')">
+                        <div class="doctor-card-name">${doctor.display_name}</div>
+                        <div class="doctor-card-info">
+                            ${doctor.hospital || '未知医院'} · ${doctor.department || '未知科室'}<br>
+                            <small style="color: #999;">专业领域：${doctor.specialty || '未填写'}</small>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                resultsContainer.innerHTML = '<div class="doctor-results-empty">搜索失败，请重试</div>';
+            }
+        }
+
+        // 选择医生
+        let selectedDoctorId = null;
+        function selectDoctor(id, name, hospital, department, specialty) {
+            selectedDoctorId = id;
+
+            document.querySelectorAll('.doctor-card').forEach(card => card.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+
+            document.getElementById('selectedDoctorName').textContent = name;
+            document.getElementById('selectedDoctorInfo').innerHTML = `
+                <strong>${hospital || '未知医院'}</strong> · ${department || '未知科室'}<br>
+                <small>专业领域：${specialty || '未填写'}</small>
+            `;
+            document.getElementById('selectedDoctorInfo').style.display = 'block';
+        }
+
+        // 分享给医生
+        async function shareToDoctor() {
+            if (!selectedDoctorId) {
+                alert('请先选择一位医生');
+                return;
+            }
+
+            if (!document.getElementById('shareConsent').checked) {
+                alert('请勾选同意分享的选项');
+                return;
+            }
+
+            const caseId = window.currentSharingCaseId;
+            if (!caseId) {
+                alert('无法获取病例信息');
+                return;
+            }
+
+            const btn = document.getElementById('shareActionBtn');
+            btn.disabled = true;
+            btn.textContent = '分享中...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/sharing/cases/${caseId}/share`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_type: 'specific_doctor',
+                        doctor_id: selectedDoctorId,
+                        consent_text: '我已阅读并同意将病例分享给选定的医生，分享内容将自动脱敏处理。',
+                        include_history: false,
+                        valid_days: 365
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || '分享失败');
+                }
+
+                const result = await response.json();
+                alert('病例已成功分享给医生！医生将收到通知。');
+                closeShareModal();
+
+                // 重置选择
+                selectedDoctorId = null;
+                document.getElementById('selectedDoctorInfo').style.display = 'none';
+                document.getElementById('doctorSearchInput').value = '';
+                document.getElementById('doctorSearchResults').innerHTML = '<div class="doctor-results-empty">输入关键词搜索医生...</div>';
+            } catch (error) {
+                alert('分享失败：' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '@提及医生';
+            }
+        }
+
         // 打开对比模态框
         function openCompareModal(caseId) {
             // 填充选择器
@@ -1326,62 +1932,6 @@
                     <div class="detail-content markdown-body">${diagnosisHtml}</div>
                 </div>
             `;
-        }
-
-        // 批注存储（使用localStorage）
-        function getAnnotations(caseId) {
-            const key = `annotations_${caseId}`;
-            const data = localStorage.getItem(key);
-            return data ? JSON.parse(data) : [];
-        }
-
-        function saveAnnotations(caseId, annotations) {
-            const key = `annotations_${caseId}`;
-            localStorage.setItem(key, JSON.stringify(annotations));
-        }
-
-        // 渲染批注列表
-        function renderAnnotations(caseId) {
-            const annotations = getAnnotations(caseId);
-            if (annotations.length === 0) {
-                return '<p style="color: #999; font-style: italic;">暂无医生批注</p>';
-            }
-
-            return annotations.map((ann, index) => `
-                <div class="annotation-item">
-                    <div class="annotation-header">
-                        <span class="annotation-author">👨‍⚕️ ${ann.author || '医生'}</span>
-                        <span>${new Date(ann.time).toLocaleString('zh-CN')}</span>
-                    </div>
-                    <div class="annotation-content">${ann.content}</div>
-                </div>
-            `).join('');
-        }
-
-        // 添加批注
-        function addAnnotation(caseId) {
-            const textArea = document.getElementById('annotationText');
-            const content = textArea.value.trim();
-
-            if (!content) {
-                alert('请输入批注内容');
-                return;
-            }
-
-            const annotations = getAnnotations(caseId);
-            annotations.push({
-                author: '医生',
-                content: content,
-                time: new Date().toISOString()
-            });
-
-            saveAnnotations(caseId, annotations);
-
-            // 更新显示
-            document.getElementById('annotationList').innerHTML = renderAnnotations(caseId);
-            textArea.value = '';
-
-            alert('批注已添加');
         }
 
         function closeModal() {
